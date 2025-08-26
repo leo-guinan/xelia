@@ -286,50 +286,50 @@ export default function AccountList() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8 min-w-0">
-                    <div className="text-center sm:text-left">
+                  <div className="flex flex-1 min-w-0">
+                    <div className="w-24 text-right pr-4">
                       <p className="text-sm font-medium text-secondary">Balance</p>
-                      <p className="text-xl font-bold text-primary" data-testid={`text-balance-${account.id}`}>
+                      <p className="text-lg font-bold text-primary" data-testid={`text-balance-${account.id}`}>
                         {formatCurrency(account.currentBalance)}
                       </p>
                     </div>
                     
-                    <div className="text-center sm:text-left">
+                    <div className="w-32 text-center px-2">
                       <p className="text-sm font-medium text-secondary">Interest Rate</p>
-                      <div className="flex items-center justify-center sm:justify-start">
+                      <div className="flex items-center justify-center mt-1">
                         <Badge 
                           variant="outline" 
-                          className={`${getInterestRateBadgeClass(interestRate)} font-medium`}
+                          className={`${getInterestRateBadgeClass(interestRate)} font-medium text-xs`}
                           data-testid={`badge-rate-${account.id}`}
                         >
                           {interestRate.toFixed(2)}%
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-auto p-0 ml-2 text-current hover:text-current"
+                            className="h-auto p-0 ml-1 text-current hover:text-current"
                             data-testid={`button-edit-rate-${account.id}`}
                           >
-                            <Edit className="h-3 w-3" />
+                            <Edit className="h-2 w-2" />
                           </Button>
                         </Badge>
                       </div>
                     </div>
                     
-                    <div className="text-center sm:text-left">
+                    <div className="w-24 text-right px-2">
                       <p className="text-sm font-medium text-secondary">Min Payment</p>
                       <p className="text-lg font-semibold text-primary" data-testid={`text-minimum-${account.id}`}>
                         {account.minimumPayment ? formatCurrency(account.minimumPayment) : "—"}
                       </p>
                     </div>
                     
-                    <div className="text-center sm:text-left">
+                    <div className="w-20 text-center px-2">
                       <p className="text-sm font-medium text-secondary">Due Date</p>
-                      <div className="flex items-center justify-center sm:justify-start">
-                        <span className="text-sm font-medium text-primary mr-2" data-testid={`text-due-date-${account.id}`}>
+                      <div className="flex items-center justify-center mt-1">
+                        <span className="text-sm font-medium text-primary" data-testid={`text-due-date-${account.id}`}>
                           {account.dueDate ? formatDueDate(account.dueDate) : "—"}
                         </span>
                         {account.dueDate && isDueSoon(account.dueDate) && (
-                          <Badge variant="destructive" className="text-xs">
+                          <Badge variant="destructive" className="text-xs ml-1">
                             <AlertCircle className="h-3 w-3 mr-1" />
                             Due Soon
                           </Badge>
