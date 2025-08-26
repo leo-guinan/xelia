@@ -162,7 +162,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating link token:", error);
       if (error.response?.data) {
-        console.error("Plaid error details:", error.response.data);
+        console.error("Plaid error details:", JSON.stringify(error.response.data, null, 2));
+      }
+      if (error.response?.status) {
+        console.error("Plaid response status:", error.response.status);
       }
       res.status(500).json({ message: "Failed to create link token" });
     }

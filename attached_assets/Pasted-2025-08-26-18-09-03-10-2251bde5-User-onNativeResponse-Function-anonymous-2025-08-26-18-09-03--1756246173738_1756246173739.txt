@@ -1,0 +1,171 @@
+2025-08-26 18:09:03.10
+2251bde5
+User
+_onNativeResponse: [Function (anonymous)],
+2025-08-26 18:09:03.10
+2251bde5
+User
+_currentRequest: [Circular *1],
+2025-08-26 18:09:03.10
+2251bde5
+User
+_currentUrl: 'https://sandbox.plaid.com/link/token/create',
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(shapeMode)]: true,
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(kCapture)]: false
+2025-08-26 18:09:03.10
+2251bde5
+User
+},
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(shapeMode)]: false,
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(kCapture)]: false,
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(kBytesWritten)]: 0,
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(kNeedDrain)]: false,
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(corked)]: 0,
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(kOutHeaders)]: [Object: null prototype] {
+2025-08-26 18:09:03.10
+2251bde5
+User
+accept: [Array],
+2025-08-26 18:09:03.10
+2251bde5
+User
+'content-type': [Array],
+2025-08-26 18:09:03.10
+2251bde5
+User
+'user-agent': [Array],
+2025-08-26 18:09:03.10
+2251bde5
+User
+'plaid-version': [Array],
+2025-08-26 18:09:03.10
+2251bde5
+User
+'plaid-client-id': [Array],
+2025-08-26 18:09:03.10
+2251bde5
+User
+'plaid-secret': [Array],
+2025-08-26 18:09:03.10
+2251bde5
+User
+'content-length': [Array],
+2025-08-26 18:09:03.10
+2251bde5
+User
+'accept-encoding': [Array],
+2025-08-26 18:09:03.10
+2251bde5
+User
+host: [Array]
+2025-08-26 18:09:03.10
+2251bde5
+User
+},
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(errored)]: null,
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(kHighWaterMark)]: 16384,
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(kRejectNonStandardBodyWrites)]: false,
+2025-08-26 18:09:03.10
+2251bde5
+User
+[Symbol(kUniqueHeaders)]: null
+2025-08-26 18:09:03.10
+2251bde5
+User
+},
+2025-08-26 18:09:03.10
+2251bde5
+User
+response: {
+2025-08-26 18:09:03.10
+2251bde5
+User
+status: 400,
+2025-08-26 18:09:03.10
+2251bde5
+User
+statusText: 'Bad Request',
+2025-08-26 18:09:03.10
+2251bde5
+User
+headers: Object [AxiosHeaders] {
+2025-08-26 18:09:03.10
+2251bde5
+User
+server: 'nginx',
+2025-08-26 18:09:03.10
+2251bde5
+User
+date: 'Tue, 26 Aug 2025 22:09:03 GMT',
+2025-08-26 18:09:03.10
+2251bde5
+User
+'content-type': 'application/json; charset=utf-8',
+2025-08-26 18:09:03.10
+2251bde5
+User
+'content-length': '254',
+2025-08-26 18:09:03.10
+2251bde5
+User
+connection: 'keep-alive',
+2025-08-26 18:09:03.10
+2251bde5
+User
+'plaid-version': '2020-09-14',
+2025-08-26 18:09:03.10
+2251bde5
+User
+vary: 'Accept-Encoding',
+2025-08-26 18:09:03.10
+2251bde5
+User
+'x-envoy-upstream-service-time': '68',
+2025-08-26 18:09:03.10
+2251bde5
+User
+'x-envoy-decorator-operation': 'default.svc-apiv2:8080/*'
+2025-08-26 18:09:03.10
+2251bde5
+User
+},
+2025-08-26 18:09:03.10
+2251bde5
+User
+adapter: [Array],
+2025-08-26 18:09:03.10
+2251bde5
+User
