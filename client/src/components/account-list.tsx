@@ -286,7 +286,7 @@ export default function AccountList() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row gap-6 lg:gap-8">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8 min-w-0">
                     <div className="text-center sm:text-left">
                       <p className="text-sm font-medium text-secondary">Balance</p>
                       <p className="text-xl font-bold text-primary" data-testid={`text-balance-${account.id}`}>
@@ -315,31 +315,27 @@ export default function AccountList() {
                       </div>
                     </div>
                     
-                    {account.minimumPayment && (
-                      <div className="text-center sm:text-left">
-                        <p className="text-sm font-medium text-secondary">Min Payment</p>
-                        <p className="text-lg font-semibold text-primary" data-testid={`text-minimum-${account.id}`}>
-                          {formatCurrency(account.minimumPayment)}
-                        </p>
-                      </div>
-                    )}
+                    <div className="text-center sm:text-left">
+                      <p className="text-sm font-medium text-secondary">Min Payment</p>
+                      <p className="text-lg font-semibold text-primary" data-testid={`text-minimum-${account.id}`}>
+                        {account.minimumPayment ? formatCurrency(account.minimumPayment) : "—"}
+                      </p>
+                    </div>
                     
-                    {account.dueDate && (
-                      <div className="text-center sm:text-left">
-                        <p className="text-sm font-medium text-secondary">Due Date</p>
-                        <div className="flex items-center justify-center sm:justify-start">
-                          <span className="text-sm font-medium text-primary mr-2" data-testid={`text-due-date-${account.id}`}>
-                            {formatDueDate(account.dueDate)}
-                          </span>
-                          {isDueSoon(account.dueDate) && (
-                            <Badge variant="destructive" className="text-xs">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              Due Soon
-                            </Badge>
-                          )}
-                        </div>
+                    <div className="text-center sm:text-left">
+                      <p className="text-sm font-medium text-secondary">Due Date</p>
+                      <div className="flex items-center justify-center sm:justify-start">
+                        <span className="text-sm font-medium text-primary mr-2" data-testid={`text-due-date-${account.id}`}>
+                          {account.dueDate ? formatDueDate(account.dueDate) : "—"}
+                        </span>
+                        {account.dueDate && isDueSoon(account.dueDate) && (
+                          <Badge variant="destructive" className="text-xs">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Due Soon
+                          </Badge>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                   
                   <div className="flex items-center space-x-2">

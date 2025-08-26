@@ -134,11 +134,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Debug: Log environment info (without exposing sensitive data)
-      console.log("Plaid Environment:", process.env.PLAID_ENV);
-      console.log("Client ID (first 8 chars):", process.env.PLAID_CLIENT_ID?.substring(0, 8));
-      console.log("Secret (first 8 chars):", process.env.PLAID_SECRET?.substring(0, 8));
-
       const linkTokenRequest = {
         user: {
           client_user_id: userId,
@@ -150,22 +145,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         products: PLAID_PRODUCTS,
         country_codes: PLAID_COUNTRY_CODES,
         language: 'en',
-        // Don't set redirect_uri for now - using embedded Link flow
-        // redirect_uri: undefined,
       };
-
-      console.log("Link token request:", JSON.stringify(linkTokenRequest, null, 2));
 
       const linkTokenResponse = await plaidClient.linkTokenCreate(linkTokenRequest);
       res.json({ link_token: linkTokenResponse.data.link_token });
     } catch (error) {
       console.error("Error creating link token:", error);
-      if (error.response?.data) {
-        console.error("Plaid error details:", JSON.stringify(error.response.data, null, 2));
-      }
-      if (error.response?.status) {
-        console.error("Plaid response status:", error.response.status);
-      }
       res.status(500).json({ message: "Failed to create link token" });
     }
   });
