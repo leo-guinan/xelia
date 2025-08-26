@@ -150,9 +150,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         products: PLAID_PRODUCTS,
         country_codes: PLAID_COUNTRY_CODES,
         language: 'en',
-        redirect_uri: process.env.NODE_ENV === 'production' 
-          ? `https://${req.hostname}/api/plaid/oauth-redirect`
-          : undefined,
+        // Don't set redirect_uri for now - using embedded Link flow
+        // redirect_uri: undefined,
       };
 
       console.log("Link token request:", JSON.stringify(linkTokenRequest, null, 2));
