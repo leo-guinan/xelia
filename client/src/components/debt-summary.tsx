@@ -18,20 +18,19 @@ export default function DebtSummary() {
   const { data: summary, isLoading, error } = useQuery<DebtSummary>({
     queryKey: ["/api/debt-summary"],
     retry: false,
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-    },
   });
+
+  // Handle unauthorized errors
+  if (error && isUnauthorizedError(error)) {
+    toast({
+      title: "Unauthorized",
+      description: "You are logged out. Logging in again...",
+      variant: "destructive",
+    });
+    setTimeout(() => {
+      window.location.href = "/api/login";
+    }, 500);
+  }
 
   if (isLoading) {
     return (

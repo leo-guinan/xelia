@@ -96,7 +96,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(debtAccounts)
       .where(and(eq(debtAccounts.id, id), eq(debtAccounts.userId, userId)));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Plaid connection operations

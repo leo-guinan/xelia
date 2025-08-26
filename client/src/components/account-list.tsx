@@ -61,20 +61,19 @@ export default function AccountList() {
   const { data: accounts = [], isLoading, error } = useQuery<DebtAccount[]>({
     queryKey: ["/api/debt-accounts"],
     retry: false,
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-    },
   });
+
+  // Handle unauthorized errors
+  if (error && isUnauthorizedError(error)) {
+    toast({
+      title: "Unauthorized",
+      description: "You are logged out. Logging in again...",
+      variant: "destructive",
+    });
+    setTimeout(() => {
+      window.location.href = "/api/login";
+    }, 500);
+  }
 
   const hideAccountMutation = useMutation({
     mutationFn: async (accountId: string) => {
@@ -103,6 +102,39 @@ export default function AccountList() {
       toast({
         title: "Error",
         description: "Failed to hide account. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const syncPlaidMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/plaid/sync");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
+      toast({
+        title: "Accounts synced",
+        description: `Updated ${data.synced_connections} of ${data.total_connections} connections.`,
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Sync failed",
+        description: "Failed to sync Plaid accounts. Please try again.",
         variant: "destructive",
       });
     },
@@ -197,7 +229,7 @@ export default function AccountList() {
     );
   }
 
-  const sortedAccounts = sortAccounts(accounts);
+  const sortedAccounts = sortAccounts(accounts || []);
 
   return (
     <Card className="bg-white shadow-sm border border-gray-200 overflow-hidden">
@@ -369,22 +401,34 @@ export default function AccountList() {
               </p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
-              toast({
-                title: "Refreshing data",
-                description: "Account data is being updated...",
-              });
-            }}
-            data-testid="button-refresh"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => syncPlaidMutation.mutate()}
+              disabled={syncPlaidMutation.isPending}
+              data-testid="button-sync-plaid"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncPlaidMutation.isPending ? 'animate-spin' : ''}`} />
+              {syncPlaidMutation.isPending ? 'Syncing...' : 'Sync Plaid'}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
+                toast({
+                  title: "Refreshing data",
+                  description: "Account data is being updated...",
+                });
+              }}
+              data-testid="button-refresh"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

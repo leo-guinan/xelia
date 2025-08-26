@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { usePlaidLink } from "react-plaid-link";
 import {
   Dialog,
   DialogContent,
@@ -118,13 +119,105 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
     },
   });
 
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+
+  // Fetch link token
+  const linkTokenMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/plaid/link-token");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setLinkToken(data.link_token);
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to initialize bank connection. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Exchange public token
+  const exchangeTokenMutation = useMutation({
+    mutationFn: async (publicToken: string) => {
+      const response = await apiRequest("POST", "/api/plaid/exchange-token", {
+        public_token: publicToken,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
+      toast({
+        title: "Accounts connected!",
+        description: `Successfully connected to ${data.institution_name}. Your debt accounts are now being synced.`,
+      });
+      onClose();
+      setLinkToken(null);
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Connection failed",
+        description: "Failed to connect your accounts. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Plaid Link configuration
+  const { open, ready } = usePlaidLink({
+    token: linkToken,
+    onSuccess: (publicToken, metadata) => {
+      console.log('Plaid Link success:', { publicToken, metadata });
+      exchangeTokenMutation.mutate(publicToken);
+    },
+    onExit: (err, metadata) => {
+      console.log('Plaid Link exit:', { err, metadata });
+      setLinkToken(null);
+    },
+    onEvent: (eventName, metadata) => {
+      console.log('Plaid Link event:', { eventName, metadata });
+    },
+  });
+
   const handlePlaidLink = () => {
-    toast({
-      title: "Coming Soon",
-      description: "Plaid integration is not yet implemented. Please add accounts manually for now.",
-      variant: "default",
-    });
+    if (linkToken && ready) {
+      open();
+    } else {
+      linkTokenMutation.mutate();
+    }
   };
+
+  // Auto-open Plaid Link when token is ready
+  useEffect(() => {
+    if (linkToken && ready) {
+      open();
+    }
+  }, [linkToken, ready, open]);
 
   const onSubmit = (data: ManualAccountForm) => {
     createAccountMutation.mutate(data);
@@ -154,11 +247,14 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
               </p>
               <Button 
                 onClick={handlePlaidLink}
+                disabled={linkTokenMutation.isPending || exchangeTokenMutation.isPending}
                 className="w-full bg-primary text-white hover:bg-gray-800"
                 data-testid="button-plaid-connect"
               >
                 <Link className="h-4 w-4 mr-2" />
-                Connect with Plaid
+                {linkTokenMutation.isPending ? "Initializing..." : 
+                 exchangeTokenMutation.isPending ? "Connecting..." : 
+                 "Connect with Plaid"}
               </Button>
             </div>
             

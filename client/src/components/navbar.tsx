@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChartLine, Plus, User, ChevronDown, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import AddAccountModal from "./add-account-modal";
+import AddAccountModal from "@/components/add-account-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
