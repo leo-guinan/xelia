@@ -136,8 +136,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Debug: Log environment info (without exposing sensitive data)
       console.log("Plaid Environment:", process.env.PLAID_ENV);
-      console.log("Client ID length:", process.env.PLAID_CLIENT_ID?.length);
-      console.log("Secret length:", process.env.PLAID_SECRET?.length);
+      console.log("Client ID (first 8 chars):", process.env.PLAID_CLIENT_ID?.substring(0, 8));
+      console.log("Secret (first 8 chars):", process.env.PLAID_SECRET?.substring(0, 8));
 
       const linkTokenRequest = {
         user: {
