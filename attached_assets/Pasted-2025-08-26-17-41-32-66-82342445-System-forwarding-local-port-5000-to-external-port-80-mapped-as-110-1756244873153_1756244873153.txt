@@ -1,0 +1,168 @@
+2025-08-26 17:41:32.66
+82342445
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-08-26 17:41:33.67
+82342445
+User
+> rest-express@1.0.0 start
+2025-08-26 17:41:33.67
+82342445
+User
+> NODE_ENV=production node dist/index.js
+2025-08-26 17:41:35.01
+82342445
+User
+9:41:34 PM [express] serving on port 5000
+2025-08-26 17:41:54.12
+82342445
+User
+9:41:54 PM [express] GET /api/auth/user 401 in 2ms :: {"message":"Unauthorized"}
+2025-08-26 17:41:56.12
+82342445
+User
+Tue, 26 Aug 2025 21:41:56 GMT express deprecated req.host: Use req.hostname instead at file:/home/runner/workspace/node_modules/openid-client/build/passport.js:224:49
+2025-08-26 17:41:58.93
+82342445
+User
+9:41:58 PM [express] GET /api/login 302 in 2807ms
+2025-08-26 17:42:04.96
+82342445
+User
+9:42:04 PM [express] GET /api/callback 302 in 2576ms
+2025-08-26 17:42:06.00
+82342445
+User
+9:42:06 PM [express] GET /api/auth/user 200 in 138ms :: {"id":"13308848","email":"leo@definet.dev","…
+2025-08-26 17:42:06.23
+82342445
+User
+9:42:06 PM [express] GET /api/debt-summary 200 in 143ms :: {"totalDebt":0,"weightedAvgRate":0,"total…
+2025-08-26 17:42:06.39
+82342445
+User
+9:42:06 PM [express] GET /api/debt-accounts 200 in 289ms :: []
+2025-08-26 17:42:10.42
+82342445
+User
+_redirectable: Writable {
+2025-08-26 17:42:10.42
+82342445
+User
+_events: [Object],
+2025-08-26 17:42:10.42
+82342445
+User
+_writableState: [WritableState],
+2025-08-26 17:42:10.42
+82342445
+User
+_maxListeners: undefined,
+2025-08-26 17:42:10.42
+82342445
+User
+_options: [Object],
+2025-08-26 17:42:10.42
+82342445
+User
+_ended: true,
+2025-08-26 17:42:10.42
+82342445
+User
+_ending: true,
+2025-08-26 17:42:10.42
+82342445
+User
+_redirectCount: 0,
+2025-08-26 17:42:10.42
+82342445
+User
+_redirects: [],
+2025-08-26 17:42:10.42
+82342445
+User
+_requestBodyLength: 277,
+2025-08-26 17:42:10.42
+82342445
+User
+_requestBodyBuffers: [],
+2025-08-26 17:42:10.42
+82342445
+User
+_eventsCount: 3,
+2025-08-26 17:42:10.42
+82342445
+User
+_onNativeResponse: [Function (anonymous)],
+2025-08-26 17:42:10.42
+82342445
+User
+_currentRequest: [Circular *1],
+2025-08-26 17:42:10.42
+82342445
+User
+_currentUrl: 'https://sandbox.plaid.com/link/token/create',
+2025-08-26 17:42:10.42
+82342445
+User
+[Symbol(shapeMode)]: true,
+2025-08-26 17:42:10.42
+82342445
+User
+[Symbol(kCapture)]: false
+2025-08-26 17:42:10.42
+82342445
+User
+},
+2025-08-26 17:42:10.42
+82342445
+User
+[Symbol(shapeMode)]: false,
+2025-08-26 17:42:10.42
+82342445
+User
+[Symbol(kCapture)]: false,
+2025-08-26 17:42:10.42
+82342445
+User
+[Symbol(kBytesWritten)]: 0,
+2025-08-26 17:42:10.42
+82342445
+User
+[Symbol(kNeedDrain)]: false,
+2025-08-26 17:42:10.42
+82342445
+User
+[Symbol(corked)]: 0,
+2025-08-26 17:42:10.42
+82342445
+User
+[Symbol(kOutHeaders)]: [Object: null prototype] {
+2025-08-26 17:42:10.42
+82342445
+User
+accept: [Array],
+2025-08-26 17:42:10.42
+82342445
+User
+'content-type': [Array],
+2025-08-26 17:42:10.42
+82342445
+User
+'user-agent': [Array],
+2025-08-26 17:42:10.42
+82342445
+User
+'plaid-version': [Array],
+2025-08-26 17:42:10.42
+82342445
+User
+'plaid-client-id': [Array],
+2025-08-26 17:42:10.42
+82342445
+User
+'plaid-secret': [Array],
+2025-08-26 17:42:10.42
+82342445
+User
+'content-length': [Array],

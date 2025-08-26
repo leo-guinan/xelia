@@ -134,6 +134,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // Debug: Log environment info (without exposing sensitive data)
+      console.log("Plaid Environment:", process.env.PLAID_ENV);
+      console.log("Client ID length:", process.env.PLAID_CLIENT_ID?.length);
+      console.log("Secret length:", process.env.PLAID_SECRET?.length);
+
       const linkTokenRequest = {
         user: {
           client_user_id: userId,
@@ -150,10 +155,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : undefined,
       };
 
+      console.log("Link token request:", JSON.stringify(linkTokenRequest, null, 2));
+
       const linkTokenResponse = await plaidClient.linkTokenCreate(linkTokenRequest);
       res.json({ link_token: linkTokenResponse.data.link_token });
     } catch (error) {
       console.error("Error creating link token:", error);
+      if (error.response?.data) {
+        console.error("Plaid error details:", error.response.data);
+      }
       res.status(500).json({ message: "Failed to create link token" });
     }
   });
