@@ -27,7 +27,7 @@
           "port": 5000,
           "healthCheckPath": "/api/health",
           "buildCommand": "npm run build",
-          "preDeployCommand": "npm run db:migrate",
+          "preDeployCommand": "npm run db:push",
           "startCommand": "npm start",
           "envVariables": {
             "NODE_ENV": "production",
