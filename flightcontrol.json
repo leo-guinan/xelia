@@ -30,13 +30,7 @@
           "startCommand": "npm start",
           "envVariables": {
             "NODE_ENV": "production",
-            "PORT": "5000",
-            "DATABASE_URL": {
-              "fromService": {
-                "id": "xelia-db",
-                "value": "connectionString"
-              }
-            }
+            "PORT": "5000"           
           
           }
         },
