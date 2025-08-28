@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import type { Express, Request, Response, NextFunction } from 'express';
-import session from 'express-session';
-import connectPg from 'connect-pg-simple';
+import expressSession from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import { storage } from './storage';
 import { z } from 'zod';
 import { config, securityConfig } from './config';
@@ -9,7 +9,7 @@ import { authRateLimiter, sanitizeMiddleware, logSecurityEvent, validatePassword
 
 // Session configuration
 export function setupSession() {
-  const pgStore = connectPg(session);
+  const pgStore = connectPgSimple(expressSession);
   const sessionStore = new pgStore({
     conString: config.DATABASE_URL,
     createTableIfMissing: false,
@@ -17,7 +17,7 @@ export function setupSession() {
     tableName: 'sessions',
   });
 
-  return session({
+  return expressSession({
     secret: config.SESSION_SECRET,
     store: sessionStore,
     resave: false,
