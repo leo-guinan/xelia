@@ -25,7 +25,7 @@ export default function Navbar() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <ChartLine className="h-8 w-8 text-primary mr-3" />
-              <h1 className="text-xl font-bold text-primary">ClearDebt</h1>
+              <h1 className="text-xl font-bold text-primary">Xelia</h1>
             </div>
             <div className="flex items-center space-x-4">
               <Button 
@@ -51,7 +51,10 @@ export default function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem 
-                    onClick={() => window.location.href = '/api/logout'}
+                    onClick={async () => {
+                      await fetch('/api/auth/logout', { method: 'POST' });
+                      window.location.href = '/login';
+                    }}
                     data-testid="button-logout"
                   >
                     <LogOut className="h-4 w-4 mr-2" />

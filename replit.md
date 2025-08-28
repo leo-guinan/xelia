@@ -1,8 +1,8 @@
-# ClearDebt - Debt Management Platform
+# Xelia - Debt Management Platform
 
 ## Overview
 
-ClearDebt is a minimalist debt management platform designed to provide users with a clear, consolidated view of their debt obligations. The application focuses exclusively on debt visibility rather than complex financial management features, offering automated bank account integration through Plaid to track multiple debt accounts across different institutions. The platform displays total debt burden, interest rates, and payment information in a simple, transparent interface that helps users understand their financial obligations without overwhelming complexity.
+Xelia is a minimalist debt management platform designed to provide users with a clear, consolidated view of their debt obligations. The application focuses exclusively on debt visibility rather than complex financial management features, offering automated bank account integration through Plaid to track multiple debt accounts across different institutions. The platform displays total debt burden, interest rates, and payment information in a simple, transparent interface that helps users understand their financial obligations without overwhelming complexity.
 
 ## User Preferences
 

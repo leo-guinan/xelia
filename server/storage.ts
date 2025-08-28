@@ -15,9 +15,14 @@ import { eq, and, desc } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
+  // Health check
+  checkHealth(): Promise<void>;
+  
   // User operations
-  // (IMPORTANT) these user operations are mandatory for Replit Auth.
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User>;
+  updateUserSecurity(id: string, updates: { failedLoginAttempts?: number; lockedUntil?: Date | null }): Promise<void>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Debt account operations
@@ -35,12 +40,39 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // User operations
-  // (IMPORTANT) these user operations are mandatory for Replit Auth.
+  // Health check
+  async checkHealth(): Promise<void> {
+    // Simple query to check database connection
+    await db.select().from(users).limit(1);
+  }
 
+  // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .returning();
+    return user;
+  }
+
+  async updateUserSecurity(id: string, updates: { failedLoginAttempts?: number; lockedUntil?: Date | null }): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id));
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {

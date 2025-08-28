@@ -1,0 +1,58 @@
+{
+  "": "https://www.flightcontrol.dev/schema.json",
+  "environments": [
+    {
+      "id": "production",
+      "name": "Xelia Production",
+      "region": "us-east-1",
+      "source": {
+        "branch": "main"
+      },
+      "services": [
+        {
+          "id": "xelia-web",
+          "name": "Xelia Web Application",
+          "type": "web",
+          "buildType": "nixpacks",
+          "target": {
+            "type": "fargate"
+          },
+          "ci": {
+            "type": "ec2"
+          },
+          "cpu": 0.5,
+          "memory": 2,
+          "minInstances": 1,
+          "maxInstances": 3,
+          "port": 5000,
+          "healthCheckPath": "/api/health",
+          "buildCommand": "npm run build",
+          "startCommand": "npm start",
+          "envVariables": {
+            "NODE_ENV": "production",
+            "PORT": "5000",
+            "DATABASE_URL": {
+              "fromService": {
+                "id": "xelia-db",
+                "value": "connectionString"
+              }
+            }
+          
+          }
+        },
+        {
+          "id": "xelia-db",
+          "name": "Xelia PostgreSQL Database",
+          "type": "rds",
+          "engine": "postgres",
+          "engineVersion": "15",
+          "instanceSize": "db.t4g.micro",
+          "storage": 20,
+          "private": true,
+          "deletionProtection": true
+        }
+      ]
+      
+    }
+  ]
+}

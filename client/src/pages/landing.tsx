@@ -11,10 +11,10 @@ export default function Landing() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <ChartLine className="h-8 w-8 text-primary mr-3" />
-              <h1 className="text-xl font-bold text-primary">ClearDebt</h1>
+              <h1 className="text-xl font-bold text-primary">Xelia</h1>
             </div>
             <Button 
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => window.location.href = '/login'}
               className="bg-primary text-white hover:bg-gray-800"
               data-testid="button-login"
             >
@@ -37,7 +37,7 @@ export default function Landing() {
           </p>
           <Button 
             size="lg"
-            onClick={() => window.location.href = '/api/login'}
+            onClick={() => window.location.href = '/register'}
             className="bg-primary text-white hover:bg-gray-800 text-lg px-8 py-4"
             data-testid="button-hero-signup"
           >
@@ -141,7 +141,7 @@ export default function Landing() {
           <Button 
             size="lg"
             variant="secondary"
-            onClick={() => window.location.href = '/api/login'}
+            onClick={() => window.location.href = '/register'}
             className="bg-white text-primary hover:bg-gray-100 text-lg px-8 py-4"
             data-testid="button-cta-signup"
           >
@@ -155,7 +155,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex items-center justify-center mb-4">
             <ChartLine className="h-6 w-6 mr-2" />
-            <span className="text-lg font-semibold">ClearDebt</span>
+            <span className="text-lg font-semibold">Xelia</span>
           </div>
           <p className="text-gray-400">
             Simple debt management for a clearer financial future

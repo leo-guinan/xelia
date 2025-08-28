@@ -1,31 +1,48 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./auth";
 import { insertDebtAccountSchema, updateDebtAccountSchema } from "@shared/schema";
 import { plaidClient, PLAID_PRODUCTS, PLAID_COUNTRY_CODES } from "./plaid";
 import { z } from "zod";
+import { apiRateLimiter, sanitizeMiddleware, Encryption, logSecurityEvent } from "./security";
+import { config } from "./config";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupAuth(app);
+  setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Note: Auth routes are now handled in auth.ts
+
+  // Health check endpoint (no auth required for monitoring)
+  app.get('/api/health', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      // Check database connection
+      await storage.checkHealth();
+      res.json({ 
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: process.env.npm_package_version || '1.0.0',
+        environment: config.NODE_ENV,
+      });
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      console.error('Health check failed:', error);
+      res.status(503).json({ 
+        status: 'unhealthy',
+        error: 'Database connection failed',
+        timestamp: new Date().toISOString(),
+      });
     }
   });
+
+  // Apply rate limiting and sanitization to all API routes
+  app.use('/api', apiRateLimiter);
+  app.use('/api', sanitizeMiddleware);
 
   // Debt account routes
   app.get('/api/debt-accounts', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId!;
       const accounts = await storage.getDebtAccounts(userId);
       res.json(accounts);
     } catch (error) {
@@ -36,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/debt-accounts', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId!;
       const validatedData = insertDebtAccountSchema.parse(req.body);
       const account = await storage.createDebtAccount({ ...validatedData, userId });
       res.status(201).json(account);
@@ -52,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/debt-accounts/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId!;
       const { id } = req.params;
       const validatedData = updateDebtAccountSchema.parse(req.body);
       const account = await storage.updateDebtAccount(id, userId, validatedData);
@@ -75,7 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/debt-accounts/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId!;
       const { id } = req.params;
       const success = await storage.deleteDebtAccount(id, userId);
       
@@ -94,7 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Debt summary calculation
   app.get('/api/debt-summary', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId!;
       const accounts = await storage.getDebtAccounts(userId);
       
       const totalDebt = accounts.reduce((sum, account) => sum + parseFloat(account.currentBalance), 0);
@@ -126,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Plaid connection routes
   app.post('/api/plaid/link-token', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId!;
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -141,7 +158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone_number: undefined,
           legal_name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : undefined,
         },
-        client_name: "ClearDebt",
+        client_name: "Xelia",
         products: PLAID_PRODUCTS,
         country_codes: PLAID_COUNTRY_CODES,
         language: 'en',
@@ -157,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/plaid/exchange-token', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId!;
       const { public_token } = req.body;
 
       if (!public_token) {
@@ -217,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sync Plaid accounts
   app.post('/api/plaid/sync', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.session.userId!;
       const connections = await storage.getPlaidConnections(userId);
 
       let syncedCount = 0;
