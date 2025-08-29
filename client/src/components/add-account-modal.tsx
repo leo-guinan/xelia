@@ -7,6 +7,7 @@ import { usePlaidLink } from "react-plaid-link";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -234,6 +235,9 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
       <DialogContent className="sm:max-w-md" data-testid="modal-add-account">
         <DialogHeader>
           <DialogTitle>Add New Account</DialogTitle>
+          <DialogDescription>
+            Connect your financial accounts or add them manually to track your debt.
+          </DialogDescription>
         </DialogHeader>
         
         {!showManualForm ? (

@@ -38,7 +38,8 @@ export function setupSecurity(app: Express) {
         frameSrc: ["'self'", "https://cdn.plaid.com"], // Plaid Link uses iframes
       },
     },
-    crossOriginEmbedderPolicy: config.NODE_ENV === 'production',
+    // Disable COEP in production to allow third-party scripts like Plaid
+    crossOriginEmbedderPolicy: false,
   }));
 
   // CORS configuration
