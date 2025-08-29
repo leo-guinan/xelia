@@ -28,14 +28,14 @@ export function setupSecurity(app: Express) {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.cloudfront.net"], // Needed for React and CDN
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.cloudfront.net", "https://cdn.plaid.com"], // Needed for React, CDN, and Plaid
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.cloudfront.net"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https://*.cloudfront.net"],
+        connectSrc: ["'self'", "https://*.cloudfront.net", "https://production.plaid.com", "https://sandbox.plaid.com", "https://development.plaid.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "https://fonts.googleapis.com"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
+        frameSrc: ["'self'", "https://cdn.plaid.com"], // Plaid Link uses iframes
       },
     },
     crossOriginEmbedderPolicy: config.NODE_ENV === 'production',
