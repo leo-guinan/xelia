@@ -19,7 +19,8 @@ const getDatabaseUrl = () => {
     // Add SSL parameters if not already present
     if (!url.includes("ssl=") && !url.includes("sslmode=")) {
       const separator = url.includes("?") ? "&" : "?";
-      url = `${url}${separator}ssl=true&sslmode=require`;
+      // Add sslmode=no-verify to accept self-signed certificates from RDS
+      url = `${url}${separator}sslmode=no-verify`;
     }
   }
   
