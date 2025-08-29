@@ -37,8 +37,8 @@
                 "id": "xelia-db",
                 "value": "dbConnectionString"
               }
-            }
-          
+            },
+            "ALLOWED_ORIGINS": "https://d2fnl92lvi2y49.cloudfront.net"
           }
         },
         {
