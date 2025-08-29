@@ -10,8 +10,16 @@ import { authRateLimiter, sanitizeMiddleware, logSecurityEvent, validatePassword
 // Session configuration
 export function setupSession() {
   const pgStore = connectPgSimple(expressSession);
+  
+  // Add SSL parameter for production
+  let connectionString = config.DATABASE_URL;
+  if (config.NODE_ENV === 'production' && !connectionString.includes('sslmode=')) {
+    const separator = connectionString.includes('?') ? '&' : '?';
+    connectionString = `${connectionString}${separator}sslmode=no-verify`;
+  }
+  
   const sessionStore = new pgStore({
-    conString: config.DATABASE_URL,
+    conString: connectionString,
     createTableIfMissing: false,
     ttl: securityConfig.sessionTtl,
     tableName: 'sessions',
