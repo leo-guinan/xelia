@@ -38,7 +38,8 @@
                 "value": "dbConnectionString"
               }
             },
-            "ALLOWED_ORIGINS": "https://d2fnl92lvi2y49.cloudfront.net"
+            "ALLOWED_ORIGINS": "https://d2fnl92lvi2y49.cloudfront.net",
+            "PLAID_ENV": "development"
           }
         },
         {
