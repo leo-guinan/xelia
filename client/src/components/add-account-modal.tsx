@@ -123,6 +123,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
 
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [methodToken, setMethodToken] = useState<string | null>(null);
+  const [methodEntityId, setMethodEntityId] = useState<string | null>(null);
   const [connectionType, setConnectionType] = useState<'plaid' | 'method' | null>(null);
 
   // Fetch link token
@@ -217,14 +218,23 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
     }
   };
 
-  // Method token mutation
+  // Method token mutation - first create entity, then get connect token
   const methodTokenMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/method/connect-token");
-      return response.json();
+      // First, create or get entity
+      const entityResponse = await apiRequest("POST", "/api/method/create-entity");
+      const entityData = await entityResponse.json();
+      
+      // Then get connect token for that entity
+      const tokenResponse = await apiRequest("POST", "/api/method/connect-token", {
+        entity_id: entityData.entity_id
+      });
+      const tokenData = await tokenResponse.json();
+      return { ...tokenData, entity_id: entityData.entity_id };
     },
     onSuccess: (data) => {
-      setMethodToken(data.token);
+      setMethodToken(data.connect_token || data.token);
+      setMethodEntityId(data.entity_id);
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
@@ -251,6 +261,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
     mutationFn: async (publicToken: string) => {
       const response = await apiRequest("POST", "/api/method/exchange-token", {
         public_token: publicToken,
+        entity_id: methodEntityId,
       });
       return response.json();
     },
@@ -263,6 +274,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
       });
       onClose();
       setMethodToken(null);
+      setMethodEntityId(null);
       setConnectionType(null);
     },
     onError: (error: Error) => {
@@ -301,11 +313,13 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
           variant: "destructive",
         });
         setMethodToken(null);
+        setMethodEntityId(null);
         setConnectionType(null);
       },
       onExit: () => {
         console.log('Method Connect exited');
         setMethodToken(null);
+        setMethodEntityId(null);
         setConnectionType(null);
       },
       onEvent: (event, metadata) => {
