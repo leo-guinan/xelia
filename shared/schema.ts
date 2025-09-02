@@ -43,6 +43,8 @@ export const debtAccounts = pgTable("debt_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   plaidAccountId: varchar("plaid_account_id"),
+  methodAccountId: varchar("method_account_id"), // Method account ID
+  syncSource: varchar("sync_source").default('manual'), // 'plaid', 'method', or 'manual'
   institutionName: varchar("institution_name").notNull(),
   accountNickname: varchar("account_nickname").notNull(),
   accountType: varchar("account_type").notNull(), // credit_card, auto_loan, student_loan, mortgage, personal_loan, heloc
@@ -52,7 +54,7 @@ export const debtAccounts = pgTable("debt_accounts", {
   dueDate: integer("due_date"), // Day of month (1-31)
   creditLimit: decimal("credit_limit", { precision: 12, scale: 2 }), // For credit cards
   isHidden: boolean("is_hidden").default(false),
-  isManual: boolean("is_manual").default(false), // Manually added vs Plaid
+  isManual: boolean("is_manual").default(false), // Manually added vs API
   lastSynced: timestamp("last_synced"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -64,6 +66,18 @@ export const plaidConnections = pgTable("plaid_connections", {
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   accessToken: text("access_token").notNull(), // This will be encrypted
   institutionId: varchar("institution_id").notNull(),
+  institutionName: varchar("institution_name").notNull(),
+  isActive: boolean("is_active").default(true),
+  lastSynced: timestamp("last_synced"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Method connections table
+export const methodConnections = pgTable("method_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  entityId: varchar("entity_id").notNull(), // Method entity ID
+  accountId: varchar("account_id").notNull(), // Method account ID
   institutionName: varchar("institution_name").notNull(),
   isActive: boolean("is_active").default(true),
   lastSynced: timestamp("last_synced"),
@@ -88,8 +102,16 @@ export const insertPlaidConnectionSchema = createInsertSchema(plaidConnections).
   createdAt: true,
 });
 
+export const insertMethodConnectionSchema = createInsertSchema(methodConnections).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
 export type InsertDebtAccount = z.infer<typeof insertDebtAccountSchema>;
 export type UpdateDebtAccount = z.infer<typeof updateDebtAccountSchema>;
 export type DebtAccount = typeof debtAccounts.$inferSelect;
 export type PlaidConnection = typeof plaidConnections.$inferSelect;
 export type InsertPlaidConnection = z.infer<typeof insertPlaidConnectionSchema>;
+export type MethodConnection = typeof methodConnections.$inferSelect;
+export type InsertMethodConnection = z.infer<typeof insertMethodConnectionSchema>;

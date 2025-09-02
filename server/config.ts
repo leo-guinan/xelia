@@ -16,6 +16,10 @@ const envSchema = z.object({
   PLAID_SECRET: z.string().optional(),
   PLAID_ENV: z.enum(['sandbox', 'development', 'production']).optional(),
   
+  // Method (optional - for liability data)
+  METHOD_API_KEY: z.string().optional(),
+  METHOD_ENV: z.enum(['dev', 'sandbox', 'production']).default('dev'),
+  
   // Server
   PORT: z.string().default('5000'),
   

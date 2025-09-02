@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { usePlaidLink } from "react-plaid-link";
+import { useMethodConnect } from "@/hooks/useMethodConnect";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Building2, Edit, Link } from "lucide-react";
+import { Building2, Edit, Link, CreditCard } from "lucide-react";
 import { insertDebtAccountSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -121,6 +122,8 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
   });
 
   const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [methodToken, setMethodToken] = useState<string | null>(null);
+  const [connectionType, setConnectionType] = useState<'plaid' | 'method' | null>(null);
 
   // Fetch link token
   const linkTokenMutation = useMutation({
@@ -206,6 +209,7 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
   });
 
   const handlePlaidLink = () => {
+    setConnectionType('plaid');
     if (linkToken && ready) {
       open();
     } else {
@@ -213,12 +217,125 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
     }
   };
 
+  // Method token mutation
+  const methodTokenMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/method/connect-token");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setMethodToken(data.token);
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to initialize Method connection. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Exchange Method public token
+  const exchangeMethodTokenMutation = useMutation({
+    mutationFn: async (publicToken: string) => {
+      const response = await apiRequest("POST", "/api/method/exchange-token", {
+        public_token: publicToken,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
+      toast({
+        title: "Accounts connected!",
+        description: "Successfully connected your liability accounts via Method.",
+      });
+      onClose();
+      setMethodToken(null);
+      setConnectionType(null);
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Connection failed",
+        description: "Failed to connect your Method accounts. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Method Connect configuration
+  const { open: openMethod, ready: methodReady } = useMethodConnect(
+    methodToken ? {
+      token: methodToken,
+      onSuccess: (publicToken, metadata) => {
+        console.log('Method Connect success:', { publicToken, metadata });
+        exchangeMethodTokenMutation.mutate(publicToken);
+      },
+      onError: (error) => {
+        console.error('Method Connect error:', error);
+        toast({
+          title: "Connection Error",
+          description: "Failed to connect with Method. Please try again.",
+          variant: "destructive",
+        });
+        setMethodToken(null);
+        setConnectionType(null);
+      },
+      onExit: () => {
+        console.log('Method Connect exited');
+        setMethodToken(null);
+        setConnectionType(null);
+      },
+      onEvent: (event, metadata) => {
+        console.log('Method Connect event:', { event, metadata });
+      },
+    } : null
+  );
+
+  const handleMethodLink = () => {
+    setConnectionType('method');
+    if (methodToken && methodReady) {
+      openMethod();
+    } else {
+      methodTokenMutation.mutate();
+    }
+  };
+
+  // Auto-open Method Connect when token is ready
+  useEffect(() => {
+    if (methodToken && methodReady && connectionType === 'method') {
+      openMethod();
+    }
+  }, [methodToken, methodReady, openMethod, connectionType]);
+
   // Auto-open Plaid Link when token is ready
   useEffect(() => {
-    if (linkToken && ready) {
+    if (linkToken && ready && connectionType === 'plaid') {
       open();
     }
-  }, [linkToken, ready, open]);
+  }, [linkToken, ready, open, connectionType]);
 
   const onSubmit = (data: ManualAccountForm) => {
     createAccountMutation.mutate(data);
@@ -242,24 +359,49 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
         
         {!showManualForm ? (
           <div className="space-y-4">
-            {/* Plaid Link Integration Point */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <Building2 className="h-12 w-12 text-secondary mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-primary mb-2">Connect Your Bank</h4>
-              <p className="text-sm text-secondary mb-4">
-                Securely connect your accounts using bank-level encryption
-              </p>
-              <Button 
-                onClick={handlePlaidLink}
-                disabled={linkTokenMutation.isPending || exchangeTokenMutation.isPending}
-                className="w-full bg-primary text-white hover:bg-gray-800"
-                data-testid="button-plaid-connect"
-              >
-                <Link className="h-4 w-4 mr-2" />
-                {linkTokenMutation.isPending ? "Initializing..." : 
-                 exchangeTokenMutation.isPending ? "Connecting..." : 
-                 "Connect with Plaid"}
-              </Button>
+            {/* Connection Options */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Plaid Link Integration */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                <Building2 className="h-10 w-10 text-secondary mx-auto mb-3" />
+                <h4 className="text-md font-medium text-primary mb-2">Bank Accounts</h4>
+                <p className="text-xs text-secondary mb-3">
+                  Connect checking & savings accounts
+                </p>
+                <Button 
+                  onClick={handlePlaidLink}
+                  disabled={linkTokenMutation.isPending || exchangeTokenMutation.isPending || connectionType === 'method'}
+                  className="w-full bg-primary text-white hover:bg-gray-800"
+                  size="sm"
+                  data-testid="button-plaid-connect"
+                >
+                  <Link className="h-4 w-4 mr-2" />
+                  {linkTokenMutation.isPending && connectionType === 'plaid' ? "Initializing..." : 
+                   exchangeTokenMutation.isPending ? "Connecting..." : 
+                   "Connect with Plaid"}
+                </Button>
+              </div>
+
+              {/* Method Link Integration */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                <CreditCard className="h-10 w-10 text-secondary mx-auto mb-3" />
+                <h4 className="text-md font-medium text-primary mb-2">Liability Accounts</h4>
+                <p className="text-xs text-secondary mb-3">
+                  Connect credit cards, loans & mortgages
+                </p>
+                <Button 
+                  onClick={handleMethodLink}
+                  disabled={methodTokenMutation.isPending || exchangeMethodTokenMutation.isPending || connectionType === 'plaid'}
+                  className="w-full bg-primary text-white hover:bg-gray-800"
+                  size="sm"
+                  data-testid="button-method-connect"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  {methodTokenMutation.isPending && connectionType === 'method' ? "Initializing..." : 
+                   exchangeMethodTokenMutation.isPending ? "Connecting..." : 
+                   "Connect with Method"}
+                </Button>
+              </div>
             </div>
             
             <div className="relative">

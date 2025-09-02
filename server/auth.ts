@@ -26,6 +26,7 @@ export function setupSession() {
   });
 
   return expressSession({
+    name: config.NODE_ENV === 'production' ? '__Host-session' : 'session',
     secret: config.SESSION_SECRET,
     store: sessionStore,
     resave: false,
@@ -34,8 +35,7 @@ export function setupSession() {
       httpOnly: true,
       secure: config.NODE_ENV === 'production',
       maxAge: securityConfig.sessionTtl,
-      sameSite: 'strict',
-      name: config.NODE_ENV === 'production' ? '__Host-session' : 'session',
+      sameSite: 'strict'
     },
   });
 }
@@ -91,8 +91,9 @@ export function setupAuth(app: Express) {
       const user = await storage.createUser({
         email: validatedData.email,
         passwordHash,
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
+        firstName: validatedData.firstName || null,
+        lastName: validatedData.lastName || null,
+        profileImageUrl: null,
         failedLoginAttempts: 0,
         lockedUntil: null,
       });

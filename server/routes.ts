@@ -7,6 +7,97 @@ import { plaidClient, PLAID_PRODUCTS, PLAID_COUNTRY_CODES } from "./plaid";
 import { z } from "zod";
 import { apiRateLimiter, sanitizeMiddleware, Encryption, logSecurityEvent } from "./security";
 import { config } from "./config";
+import { isMethodConfigured, getMethodClient, MethodClient } from "./method";
+
+// Helper function to sync Method accounts
+async function syncMethodAccounts(userId: string, entityId: string, accountId: string) {
+  try {
+    const methodClient = getMethodClient();
+    
+    // Get account details
+    const account = await methodClient.getAccount(accountId);
+    const accountData = MethodClient.formatAccountData(account);
+    
+    // Check if account already exists
+    const existingAccounts = await storage.getDebtAccounts(userId);
+    const exists = existingAccounts.find(acc => acc.methodAccountId === account.id);
+    
+    if (!exists) {
+      // Create new account
+      await storage.createDebtAccount({
+        ...accountData,
+        userId,
+      });
+    } else {
+      // Update existing account
+      await storage.updateDebtAccount(exists.id, userId, {
+        currentBalance: accountData.currentBalance,
+        interestRate: accountData.interestRate,
+        minimumPayment: accountData.minimumPayment,
+        creditLimit: accountData.creditLimit,
+        lastSynced: new Date(),
+      });
+    }
+  } catch (error) {
+    console.error('Error syncing Method accounts:', error);
+    throw error;
+  }
+}
+
+// Helper function to sync accounts from Plaid
+async function syncPlaidAccounts(userId: string, accessToken: string, institutionName: string) {
+  try {
+    // Get accounts
+    const accountsResponse = await plaidClient.accountsGet({ access_token: accessToken });
+    
+    // Process liability accounts
+    for (const account of accountsResponse.data.accounts) {
+      if (account.type === 'credit' || account.type === 'loan') {
+        const balances = account.balances;
+        const balance = balances.current || 0;
+        
+        // Map Plaid account type to our system
+        let accountType = 'personal_loan';
+        if (account.subtype === 'credit card') accountType = 'credit_card';
+        else if (account.subtype === 'auto') accountType = 'auto_loan';
+        else if (account.subtype === 'student') accountType = 'student_loan';
+        else if (account.subtype === 'mortgage' || account.subtype === 'home equity') accountType = 'mortgage';
+        
+        // Check if account already exists
+        const existingAccounts = await storage.getDebtAccounts(userId);
+        const exists = existingAccounts.find(acc => acc.plaidAccountId === account.account_id);
+        
+        if (!exists) {
+          // Create new account
+          await storage.createDebtAccount({
+            userId,
+            plaidAccountId: account.account_id,
+            syncSource: 'plaid',
+            accountType,
+            institutionName,
+            accountNickname: account.name,
+            currentBalance: balance.toFixed(2),
+            interestRate: '0', // Plaid doesn't provide interest rates
+            minimumPayment: null,
+            creditLimit: account.type === 'credit' && balances.limit ? balances.limit.toFixed(2) : null,
+            isManual: false,
+            lastSynced: new Date(),
+          });
+        } else {
+          // Update existing account
+          await storage.updateDebtAccount(exists.id, userId, {
+            currentBalance: balance.toFixed(2),
+            creditLimit: account.type === 'credit' && balances.limit ? balances.limit.toFixed(2) : null,
+            lastSynced: new Date(),
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error syncing Plaid accounts:', error);
+    throw error;
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -259,116 +350,152 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function to sync accounts from Plaid
-  async function syncPlaidAccounts(userId: string, accessToken: string, institutionName: string) {
-    try {
-      // Get accounts
-      const accountsResponse = await plaidClient.accountsGet({ access_token: accessToken });
-      const accounts = accountsResponse.data.accounts;
-
-      // Get liabilities (debt accounts)
-      const liabilitiesResponse = await plaidClient.liabilitiesGet({ access_token: accessToken });
-      const liabilities = liabilitiesResponse.data.liabilities;
-
-      // Process credit cards
-      for (const creditCard of liabilities.credit || []) {
-        const account = accounts.find(acc => acc.account_id === creditCard.account_id);
-        if (!account) continue;
-
-        const existingAccount = await storage.getDebtAccounts(userId);
-        const exists = existingAccount.find(acc => acc.plaidAccountId === account.account_id);
+  // Method API routes (if configured)
+  const methodModule = config.METHOD_API_KEY ? await import('./method') : null;
+  
+  if (methodModule) {
+    const { getMethodClient, isMethodConfigured, MethodClient } = methodModule;
+    
+    // Create or get Method entity for user
+    app.post('/api/method/create-entity', isAuthenticated, async (req: any, res) => {
+      try {
+        if (!isMethodConfigured()) {
+          return res.status(400).json({ message: 'Method is not configured' });
+        }
         
-        if (!exists) {
-          await storage.createDebtAccount({
-            userId,
-            plaidAccountId: account.account_id,
-            institutionName,
-            accountNickname: account.name || `${institutionName} Credit Card`,
-            accountType: 'credit_card',
-            currentBalance: Math.abs(account.balances.current || 0).toFixed(2),
-            interestRate: (creditCard.aprs?.find(apr => apr.apr_type === 'purchase_apr')?.apr_percentage || 0).toFixed(2),
-            minimumPayment: creditCard.last_payment_amount?.toFixed(2) || null,
-            creditLimit: account.balances.limit?.toFixed(2) || null,
-            isManual: false,
-            lastSynced: new Date(),
-          });
-        } else {
-          // Update existing account
-          await storage.updateDebtAccount(exists.id, userId, {
-            currentBalance: Math.abs(account.balances.current || 0).toFixed(2),
-            interestRate: (creditCard.aprs?.find(apr => apr.apr_type === 'purchase_apr')?.apr_percentage || parseFloat(exists.interestRate)).toFixed(2),
-            creditLimit: account.balances.limit?.toFixed(2) || exists.creditLimit,
-            lastSynced: new Date(),
+        const userId = req.session.userId!;
+        const user = await storage.getUser(userId);
+        
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Check if entity already exists
+        const existingConnections = await storage.getMethodConnections(userId);
+        if (existingConnections.length > 0) {
+          return res.json({ 
+            entity_id: existingConnections[0].entityId,
+            exists: true 
           });
         }
-      }
-
-      // Process student loans
-      for (const studentLoan of liabilities.student || []) {
-        const account = accounts.find(acc => acc.account_id === studentLoan.account_id);
-        if (!account) continue;
-
-        const existingAccount = await storage.getDebtAccounts(userId);
-        const exists = existingAccount.find(acc => acc.plaidAccountId === account.account_id);
         
-        if (!exists) {
-          await storage.createDebtAccount({
-            userId,
-            plaidAccountId: account.account_id,
-            institutionName,
-            accountNickname: account.name || `${institutionName} Student Loan`,
-            accountType: 'student_loan',
-            currentBalance: Math.abs(account.balances.current || 0).toFixed(2),
-            interestRate: (studentLoan.interest_rate_percentage || 0).toFixed(2),
-            minimumPayment: studentLoan.minimum_payment_amount?.toFixed(2) || null,
-            isManual: false,
-            lastSynced: new Date(),
-          });
-        } else {
-          // Update existing account
-          await storage.updateDebtAccount(exists.id, userId, {
-            currentBalance: Math.abs(account.balances.current || 0).toFixed(2),
-            interestRate: (studentLoan.interest_rate_percentage || parseFloat(exists.interestRate)).toFixed(2),
-            minimumPayment: studentLoan.minimum_payment_amount?.toFixed(2) || exists.minimumPayment,
-            lastSynced: new Date(),
-          });
-        }
-      }
-
-      // Process mortgages
-      for (const mortgage of liabilities.mortgage || []) {
-        const account = accounts.find(acc => acc.account_id === mortgage.account_id);
-        if (!account) continue;
-
-        const existingAccount = await storage.getDebtAccounts(userId);
-        const exists = existingAccount.find(acc => acc.plaidAccountId === account.account_id);
+        // Create new entity
+        const methodClient = getMethodClient();
+        const entity = await methodClient.createEntity({
+          firstName: user.firstName || 'Unknown',
+          lastName: user.lastName || 'Unknown',
+          phone: '6505551234', // Test phone for dev
+          email: user.email,
+        });
         
-        if (!exists) {
-          await storage.createDebtAccount({
-            userId,
-            plaidAccountId: account.account_id,
-            institutionName,
-            accountNickname: account.name || `${institutionName} Mortgage`,
-            accountType: 'mortgage',
-            currentBalance: Math.abs(account.balances.current || 0).toFixed(2),
-            interestRate: (mortgage.interest_rate?.percentage || 0).toFixed(2),
-            minimumPayment: null, // Mortgages don't have minimum_payment_amount in Plaid API
-            isManual: false,
-            lastSynced: new Date(),
-          });
-        } else {
-          // Update existing account
-          await storage.updateDebtAccount(exists.id, userId, {
-            currentBalance: Math.abs(account.balances.current || 0).toFixed(2),
-            interestRate: (mortgage.interest_rate?.percentage || parseFloat(exists.interestRate)).toFixed(2),
-            lastSynced: new Date(),
-          });
-        }
+        res.json({ 
+          entity_id: entity.id,
+          exists: false 
+        });
+      } catch (error) {
+        console.error('Error creating Method entity:', error);
+        res.status(500).json({ message: 'Failed to create Method entity' });
       }
-    } catch (error) {
-      console.error("Error syncing Plaid accounts:", error);
-      throw error;
-    }
+    });
+    
+    // Generate Method Connect token
+    app.post('/api/method/connect-token', isAuthenticated, async (req: any, res) => {
+      try {
+        if (!isMethodConfigured()) {
+          return res.status(400).json({ message: 'Method is not configured' });
+        }
+        
+        const { entity_id } = req.body;
+        if (!entity_id) {
+          return res.status(400).json({ message: 'Entity ID is required' });
+        }
+        
+        const methodClient = getMethodClient();
+        const connectToken = await methodClient.createConnectToken(entity_id);
+        
+        res.json({ connect_token: connectToken.token });
+      } catch (error) {
+        console.error('Error creating Method connect token:', error);
+        res.status(500).json({ message: 'Failed to create connect token' });
+      }
+    });
+    
+    // Exchange Method public token
+    app.post('/api/method/exchange-token', isAuthenticated, async (req: any, res) => {
+      try {
+        if (!isMethodConfigured()) {
+          return res.status(400).json({ message: 'Method is not configured' });
+        }
+        
+        const userId = req.session.userId!;
+        const { public_token, entity_id, institution_name } = req.body;
+        
+        if (!public_token || !entity_id) {
+          return res.status(400).json({ message: 'Public token and entity ID are required' });
+        }
+        
+        const methodClient = getMethodClient();
+        
+        // Exchange public token
+        const { account_id } = await methodClient.exchangePublicToken(public_token);
+        
+        // Save Method connection
+        const connection = await storage.createMethodConnection({
+          userId,
+          entityId: entity_id,
+          accountId: account_id,
+          institutionName: institution_name || 'Unknown Institution',
+          isActive: true,
+          lastSynced: new Date(),
+        });
+        
+        // Sync accounts immediately
+        await syncMethodAccounts(userId, entity_id, account_id);
+        
+        res.json({
+          success: true,
+          connection_id: connection.id,
+        });
+      } catch (error) {
+        console.error('Error exchanging Method token:', error);
+        res.status(500).json({ message: 'Failed to exchange token' });
+      }
+    });
+    
+    // Sync Method accounts
+    app.post('/api/method/sync', isAuthenticated, async (req: any, res) => {
+      try {
+        if (!isMethodConfigured()) {
+          return res.status(400).json({ message: 'Method is not configured' });
+        }
+        
+        const userId = req.session.userId!;
+        const connections = await storage.getMethodConnections(userId);
+        let syncedCount = 0;
+        
+        for (const connection of connections) {
+          try {
+            await syncMethodAccounts(userId, connection.entityId, connection.accountId);
+            await storage.updateMethodConnection(connection.id, userId, { 
+              lastSynced: new Date() 
+            });
+            syncedCount++;
+          } catch (error) {
+            console.error(`Failed to sync Method connection ${connection.id}:`, error);
+          }
+        }
+        
+        res.json({
+          success: true,
+          synced_connections: syncedCount,
+          total_connections: connections.length,
+        });
+      } catch (error) {
+        console.error('Error syncing Method accounts:', error);
+        res.status(500).json({ message: 'Failed to sync accounts' });
+      }
+    });
+    
   }
 
   const httpServer = createServer(app);

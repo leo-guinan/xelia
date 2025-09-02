@@ -2,6 +2,7 @@ import {
   users,
   debtAccounts,
   plaidConnections,
+  methodConnections,
   type User,
   type UpsertUser,
   type DebtAccount,
@@ -9,6 +10,8 @@ import {
   type UpdateDebtAccount,
   type PlaidConnection,
   type InsertPlaidConnection,
+  type MethodConnection,
+  type InsertMethodConnection,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -37,6 +40,12 @@ export interface IStorage {
   createPlaidConnection(connection: InsertPlaidConnection & { userId: string }): Promise<PlaidConnection>;
   updatePlaidConnection(id: string, userId: string, updates: Partial<PlaidConnection>): Promise<PlaidConnection | undefined>;
   getPlaidConnectionByToken(accessToken: string): Promise<PlaidConnection | undefined>;
+  
+  // Method connection operations
+  getMethodConnections(userId: string): Promise<MethodConnection[]>;
+  getMethodConnectionByEntity(entityId: string): Promise<MethodConnection | undefined>;
+  createMethodConnection(connection: InsertMethodConnection & { userId: string }): Promise<MethodConnection>;
+  updateMethodConnection(id: string, userId: string, updates: Partial<MethodConnection>): Promise<MethodConnection | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -161,6 +170,39 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(plaidConnections)
       .where(eq(plaidConnections.accessToken, accessToken));
+    return connection;
+  }
+
+  // Method connection operations
+  async getMethodConnections(userId: string): Promise<MethodConnection[]> {
+    return await db
+      .select()
+      .from(methodConnections)
+      .where(and(eq(methodConnections.userId, userId), eq(methodConnections.isActive, true)));
+  }
+
+  async getMethodConnectionByEntity(entityId: string): Promise<MethodConnection | undefined> {
+    const [connection] = await db
+      .select()
+      .from(methodConnections)
+      .where(eq(methodConnections.entityId, entityId));
+    return connection;
+  }
+
+  async createMethodConnection(connectionData: InsertMethodConnection & { userId: string }): Promise<MethodConnection> {
+    const [connection] = await db
+      .insert(methodConnections)
+      .values(connectionData)
+      .returning();
+    return connection;
+  }
+
+  async updateMethodConnection(id: string, userId: string, updates: Partial<MethodConnection>): Promise<MethodConnection | undefined> {
+    const [connection] = await db
+      .update(methodConnections)
+      .set(updates)
+      .where(and(eq(methodConnections.id, id), eq(methodConnections.userId, userId)))
+      .returning();
     return connection;
   }
 }

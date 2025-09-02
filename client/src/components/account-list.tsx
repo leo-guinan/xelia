@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -11,50 +9,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { 
   CreditCard, 
-  Car, 
-  GraduationCap, 
-  Home, 
-  DollarSign, 
-  MoreVertical, 
-  Edit,
-  EyeOff,
   RefreshCw,
   CheckCircle,
   AlertCircle,
+  Plus,
 } from "lucide-react";
 import { DebtAccount } from "@shared/schema";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-
-const accountTypeIcons = {
-  credit_card: CreditCard,
-  auto_loan: Car,
-  student_loan: GraduationCap,
-  mortgage: Home,
-  personal_loan: DollarSign,
-  heloc: Home,
-};
-
-const accountTypeLabels = {
-  credit_card: "Credit Card",
-  auto_loan: "Auto Loan",
-  student_loan: "Student Loan",
-  mortgage: "Mortgage",
-  personal_loan: "Personal Loan",
-  heloc: "HELOC",
-};
+import AccountCard from "./account-card";
+import AddAccountModal from "./add-account-modal";
 
 export default function AccountList() {
   const [sortBy, setSortBy] = useState("balance-desc");
+  const [showAddModal, setShowAddModal] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -75,38 +46,6 @@ export default function AccountList() {
     }, 500);
   }
 
-  const hideAccountMutation = useMutation({
-    mutationFn: async (accountId: string) => {
-      await apiRequest("PUT", `/api/debt-accounts/${accountId}`, { isHidden: true });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
-      toast({
-        title: "Account hidden",
-        description: "The account has been hidden from your dashboard.",
-      });
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to hide account. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const syncPlaidMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/plaid/sync");
@@ -116,7 +55,7 @@ export default function AccountList() {
       queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
       toast({
-        title: "Accounts synced",
+        title: "Plaid accounts synced",
         description: `Updated ${data.synced_connections} of ${data.total_connections} connections.`,
       });
     },
@@ -140,17 +79,78 @@ export default function AccountList() {
     },
   });
 
-  const getInterestRateColor = (rate: number) => {
-    if (rate >= 20) return "debt-red";
-    if (rate >= 10) return "debt-amber";
-    return "debt-green";
-  };
+  const syncMethodMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/method/sync");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
+      toast({
+        title: "Method accounts synced",
+        description: `Updated ${data.synced_accounts} accounts.`,
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Sync failed",
+        description: "Failed to sync Method accounts. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
-  const getInterestRateBadgeClass = (rate: number) => {
-    if (rate >= 20) return "bg-red-50 text-debt-red border-red-200";
-    if (rate >= 10) return "bg-amber-50 text-debt-amber border-amber-200";
-    return "bg-green-50 text-debt-green border-green-200";
-  };
+  const syncAccountMutation = useMutation({
+    mutationFn: async (accountId: string) => {
+      const account = accounts.find(a => a.id === accountId);
+      if (!account) throw new Error("Account not found");
+      
+      const endpoint = account.syncSource === 'method' 
+        ? `/api/method/sync/${accountId}`
+        : `/api/plaid/sync/${accountId}`;
+      
+      const response = await apiRequest("POST", endpoint);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
+      toast({
+        title: "Account synced",
+        description: "Account data has been updated.",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Sync failed",
+        description: "Failed to sync account. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const sortAccounts = (accounts: DebtAccount[]) => {
     switch (sortBy) {
@@ -158,47 +158,13 @@ export default function AccountList() {
         return [...accounts].sort((a, b) => parseFloat(b.currentBalance) - parseFloat(a.currentBalance));
       case "rate-desc":
         return [...accounts].sort((a, b) => parseFloat(b.interestRate) - parseFloat(a.interestRate));
-      case "due-date":
-        return [...accounts].sort((a, b) => (a.dueDate || 999) - (b.dueDate || 999));
+      case "type":
+        return [...accounts].sort((a, b) => a.accountType.localeCompare(b.accountType));
+      case "source":
+        return [...accounts].sort((a, b) => (a.syncSource || 'manual').localeCompare(b.syncSource || 'manual'));
       default:
         return accounts;
     }
-  };
-
-  const formatCurrency = (amount: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(parseFloat(amount));
-  };
-
-  const formatDueDate = (dueDate: number | null) => {
-    if (!dueDate) return "Not set";
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    const dueMonth = dueDate <= now.getDate() ? currentMonth + 1 : currentMonth;
-    const year = dueMonth > 11 ? currentYear + 1 : currentYear;
-    const month = dueMonth > 11 ? 0 : dueMonth;
-    
-    const dueDateTime = new Date(year, month, dueDate);
-    return dueDateTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const isDueSoon = (dueDate: number | null) => {
-    if (!dueDate) return false;
-    const now = new Date();
-    const currentDay = now.getDate();
-    const daysUntilDue = dueDate >= currentDay ? dueDate - currentDay : (30 - currentDay) + dueDate;
-    return daysUntilDue <= 5;
-  };
-
-  const getCreditUtilization = (balance: string, limit: string | null) => {
-    if (!limit) return null;
-    const utilization = (parseFloat(balance) / parseFloat(limit)) * 100;
-    return Math.round(utilization);
   };
 
   if (isLoading) {
@@ -208,7 +174,7 @@ export default function AccountList() {
           <div className="animate-pulse space-y-4">
             <div className="h-6 bg-gray-200 rounded w-1/4"></div>
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+              <div key={i} className="h-32 bg-gray-200 rounded"></div>
             ))}
           </div>
         </CardContent>
@@ -230,203 +196,142 @@ export default function AccountList() {
   }
 
   const sortedAccounts = sortAccounts(accounts || []);
+  const plaidAccounts = accounts.filter(a => a.syncSource === 'plaid' || (!a.syncSource && !a.isManual));
+  const methodAccounts = accounts.filter(a => a.syncSource === 'method');
+  const manualAccounts = accounts.filter(a => a.isManual);
 
   return (
-    <Card className="bg-white shadow-sm border border-gray-200 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h3 className="text-lg font-semibold text-primary">Your Accounts</h3>
-          <div className="flex items-center space-x-3">
-            <label htmlFor="sort-select" className="text-sm font-medium text-secondary">
-              Sort by:
-            </label>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48" data-testid="select-sort">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="balance-desc">Balance (High to Low)</SelectItem>
-                <SelectItem value="rate-desc">Interest Rate (High to Low)</SelectItem>
-                <SelectItem value="due-date">Due Date</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      <div className="divide-y divide-gray-200">
-        {sortedAccounts.length === 0 ? (
-          <div className="px-6 py-12 text-center">
-            <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h4 className="text-lg font-semibold text-primary mb-2">No accounts found</h4>
-            <p className="text-secondary">Add your first debt account to get started</p>
-          </div>
-        ) : (
-          sortedAccounts.map((account) => {
-            const IconComponent = accountTypeIcons[account.accountType as keyof typeof accountTypeIcons] || CreditCard;
-            const interestRate = parseFloat(account.interestRate);
-            const utilization = getCreditUtilization(account.currentBalance, account.creditLimit);
-            
-            return (
-              <div key={account.id} className="px-6 py-4 hover:bg-gray-50 transition-colors" data-testid={`card-account-${account.id}`}>
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className={`w-12 h-12 bg-${getInterestRateColor(interestRate)}-50 rounded-lg flex items-center justify-center`}>
-                        <IconComponent className={`h-6 w-6 text-${getInterestRateColor(interestRate)}`} />
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-primary" data-testid={`text-account-name-${account.id}`}>
-                        {account.accountNickname}
-                      </h4>
-                      <p className="text-sm text-secondary">
-                        {account.institutionName} • {accountTypeLabels[account.accountType as keyof typeof accountTypeLabels]}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-1 min-w-0">
-                    <div className="w-24 text-right pr-4">
-                      <p className="text-sm font-medium text-secondary">Balance</p>
-                      <p className="text-lg font-bold text-primary" data-testid={`text-balance-${account.id}`}>
-                        {formatCurrency(account.currentBalance)}
-                      </p>
-                    </div>
-                    
-                    <div className="w-32 text-center px-2">
-                      <p className="text-sm font-medium text-secondary">Interest Rate</p>
-                      <div className="flex items-center justify-center mt-1">
-                        <Badge 
-                          variant="outline" 
-                          className={`${getInterestRateBadgeClass(interestRate)} font-medium text-xs`}
-                          data-testid={`badge-rate-${account.id}`}
-                        >
-                          {interestRate.toFixed(2)}%
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-auto p-0 ml-1 text-current hover:text-current"
-                            data-testid={`button-edit-rate-${account.id}`}
-                          >
-                            <Edit className="h-2 w-2" />
-                          </Button>
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div className="w-24 text-right px-2">
-                      <p className="text-sm font-medium text-secondary">Min Payment</p>
-                      <p className="text-lg font-semibold text-primary" data-testid={`text-minimum-${account.id}`}>
-                        {account.minimumPayment ? formatCurrency(account.minimumPayment) : "—"}
-                      </p>
-                    </div>
-                    
-                    <div className="w-20 text-center px-2">
-                      <p className="text-sm font-medium text-secondary">Due Date</p>
-                      <div className="flex items-center justify-center mt-1">
-                        <span className="text-sm font-medium text-primary" data-testid={`text-due-date-${account.id}`}>
-                          {account.dueDate ? formatDueDate(account.dueDate) : "—"}
-                        </span>
-                        {account.dueDate && isDueSoon(account.dueDate) && (
-                          <Badge variant="destructive" className="text-xs ml-1">
-                            <AlertCircle className="h-3 w-3 mr-1" />
-                            Due Soon
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="p-2 text-secondary hover:text-primary"
-                          data-testid={`button-menu-${account.id}`}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          onClick={() => hideAccountMutation.mutate(account.id)}
-                          disabled={hideAccountMutation.isPending}
-                          data-testid={`button-hide-${account.id}`}
-                        >
-                          <EyeOff className="h-4 w-4 mr-2" />
-                          Hide Account
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-                
-                {/* Credit Utilization Bar for Credit Cards */}
-                {account.accountType === 'credit_card' && utilization !== null && (
-                  <div className="mt-4 lg:ml-16">
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="text-secondary">Credit Utilization</span>
-                      <span className="font-medium text-secondary" data-testid={`text-utilization-${account.id}`}>
-                        {utilization}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={utilization} 
-                      className={`h-2 ${utilization > 80 ? 'text-debt-red' : utilization > 30 ? 'text-debt-amber' : 'text-debt-green'}`}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
-      
-      {/* Connection Status */}
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <CheckCircle className="h-5 w-5 text-debt-green" />
-            <div>
-              <h4 className="text-sm font-semibold text-primary">All accounts synced</h4>
-              <p className="text-xs text-secondary">
-                Last updated: {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </p>
+    <>
+      <Card className="bg-white shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <h3 className="text-lg font-semibold text-primary">Your Accounts</h3>
+              <Button
+                onClick={() => setShowAddModal(true)}
+                size="sm"
+                className="bg-primary text-white hover:bg-gray-800"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Account
+              </Button>
+            </div>
+            <div className="flex items-center space-x-3">
+              <label htmlFor="sort-select" className="text-sm font-medium text-secondary">
+                Sort by:
+              </label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-48" data-testid="select-sort">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="balance-desc">Balance (High to Low)</SelectItem>
+                  <SelectItem value="rate-desc">Interest Rate (High to Low)</SelectItem>
+                  <SelectItem value="type">Account Type</SelectItem>
+                  <SelectItem value="source">Data Source</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => syncPlaidMutation.mutate()}
-              disabled={syncPlaidMutation.isPending}
-              data-testid="button-sync-plaid"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncPlaidMutation.isPending ? 'animate-spin' : ''}`} />
-              {syncPlaidMutation.isPending ? 'Syncing...' : 'Sync Plaid'}
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
-                toast({
-                  title: "Refreshing data",
-                  description: "Account data is being updated...",
-                });
-              }}
-              data-testid="button-refresh"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
         </div>
-      </div>
-    </Card>
+
+        <div className="p-6">
+          {sortedAccounts.length === 0 ? (
+            <div className="text-center py-12">
+              <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h4 className="text-lg font-semibold text-primary mb-2">No accounts found</h4>
+              <p className="text-secondary mb-4">Add your first debt account to get started</p>
+              <Button
+                onClick={() => setShowAddModal(true)}
+                className="bg-primary text-white hover:bg-gray-800"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Account
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {sortedAccounts.map((account) => (
+                <AccountCard
+                  key={account.id}
+                  account={account}
+                  onSync={!account.isManual ? (id) => syncAccountMutation.mutate(id) : undefined}
+                  isSyncing={syncAccountMutation.isPending && syncAccountMutation.variables === account.id}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Connection Status */}
+        {sortedAccounts.length > 0 && (
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <div>
+                  <h4 className="text-sm font-semibold text-primary">Connection Status</h4>
+                  <p className="text-xs text-secondary">
+                    {plaidAccounts.length > 0 && `${plaidAccounts.length} Plaid`}
+                    {plaidAccounts.length > 0 && methodAccounts.length > 0 && ', '}
+                    {methodAccounts.length > 0 && `${methodAccounts.length} Method`}
+                    {(plaidAccounts.length > 0 || methodAccounts.length > 0) && manualAccounts.length > 0 && ', '}
+                    {manualAccounts.length > 0 && `${manualAccounts.length} Manual`}
+                    {' accounts'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                {plaidAccounts.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => syncPlaidMutation.mutate()}
+                    disabled={syncPlaidMutation.isPending}
+                    data-testid="button-sync-plaid"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${syncPlaidMutation.isPending ? 'animate-spin' : ''}`} />
+                    {syncPlaidMutation.isPending ? 'Syncing...' : 'Sync Plaid'}
+                  </Button>
+                )}
+                {methodAccounts.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => syncMethodMutation.mutate()}
+                    disabled={syncMethodMutation.isPending}
+                    data-testid="button-sync-method"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${syncMethodMutation.isPending ? 'animate-spin' : ''}`} />
+                    {syncMethodMutation.isPending ? 'Syncing...' : 'Sync Method'}
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
+                    queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
+                    toast({
+                      title: "Refreshing data",
+                      description: "Account data is being updated...",
+                    });
+                  }}
+                  data-testid="button-refresh"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <AddAccountModal 
+        isOpen={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+      />
+    </>
   );
 }
