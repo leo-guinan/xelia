@@ -36,7 +36,7 @@ export function useMethodConnect(config: MethodConfig | null) {
     }
 
     // Check if script tag already exists
-    const existingScript = document.querySelector('script[src*="method.dev"]');
+    const existingScript = document.querySelector('script[src*="methodfi.com"]');
     if (existingScript) {
       existingScript.addEventListener('load', () => {
         setReady(true);
@@ -46,7 +46,7 @@ export function useMethodConnect(config: MethodConfig | null) {
 
     // Create and load script
     const script = document.createElement('script');
-    script.src = 'https://cdn.method.dev/connect.js';
+    script.src = 'https://static.methodfi.com/connect.js';
     script.async = true;
     script.onload = () => {
       if (window.Method) {

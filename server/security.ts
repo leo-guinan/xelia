@@ -28,14 +28,14 @@ export function setupSecurity(app: Express) {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.cloudfront.net", "https://cdn.plaid.com", "https://cdn.method.dev"], // Needed for React, CDN, Plaid, and Method
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.cloudfront.net", "https://cdn.plaid.com", "https://static.methodfi.com"], // Needed for React, CDN, Plaid, and Method
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://*.cloudfront.net"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https://*.cloudfront.net", "https://production.plaid.com", "https://sandbox.plaid.com", "https://development.plaid.com", "https://api.method.dev", "https://dev.method.dev"],
+        connectSrc: ["'self'", "https://*.cloudfront.net", "https://production.plaid.com", "https://sandbox.plaid.com", "https://development.plaid.com", "https://api.methodfi.com", "https://sandbox.methodfi.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "https://fonts.googleapis.com"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
-        frameSrc: ["'self'", "https://cdn.plaid.com", "https://cdn.method.dev"], // Plaid Link and Method Connect use iframes
+        frameSrc: ["'self'", "https://cdn.plaid.com", "https://static.methodfi.com"], // Plaid Link and Method Connect use iframes
       },
     },
     // Disable COEP in production to allow third-party scripts like Plaid

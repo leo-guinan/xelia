@@ -66,8 +66,8 @@ export class MethodClient {
     // Method API base URL based on environment
     const methodEnv = getMethodEnvironment();
     this.baseUrl = methodEnv === Environments.production 
-      ? 'https://api.method.dev' 
-      : 'https://dev.method.dev';
+      ? 'https://api.methodfi.com' 
+      : 'https://sandbox.methodfi.com';
   }
 
   // Helper method for API requests

@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { usePlaidLink } from "react-plaid-link";
-import { useMethodConnect } from "@/hooks/useMethodConnect";
+// import { useMethodConnect } from "@/hooks/useMethodConnect"; // Method doesn't have a client-side SDK
 import {
   Dialog,
   DialogContent,
@@ -122,8 +122,8 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
   });
 
   const [linkToken, setLinkToken] = useState<string | null>(null);
-  const [methodToken, setMethodToken] = useState<string | null>(null);
-  const [methodEntityId, setMethodEntityId] = useState<string | null>(null);
+  // const [methodToken, setMethodToken] = useState<string | null>(null); // For Method integration
+  // const [methodEntityId, setMethodEntityId] = useState<string | null>(null); // For Method integration
   const [connectionType, setConnectionType] = useState<'plaid' | 'method' | null>(null);
 
   // Fetch link token
@@ -218,8 +218,8 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
     }
   };
 
-  // Method token mutation - first create entity, then get connect token
-  const methodTokenMutation = useMutation({
+  // Method token mutation - Disabled until server-side flow is implemented
+  /* const methodTokenMutation = useMutation({
     mutationFn: async () => {
       // First, create or get entity
       const entityResponse = await apiRequest("POST", "/api/method/create-entity");
@@ -254,95 +254,11 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
         variant: "destructive",
       });
     },
-  });
+  }); */
 
-  // Exchange Method public token
-  const exchangeMethodTokenMutation = useMutation({
-    mutationFn: async (publicToken: string) => {
-      const response = await apiRequest("POST", "/api/method/exchange-token", {
-        public_token: publicToken,
-        entity_id: methodEntityId,
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/debt-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/debt-summary"] });
-      toast({
-        title: "Accounts connected!",
-        description: "Successfully connected your liability accounts via Method.",
-      });
-      onClose();
-      setMethodToken(null);
-      setMethodEntityId(null);
-      setConnectionType(null);
-    },
-    onError: (error: Error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Connection failed",
-        description: "Failed to connect your Method accounts. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Method Connect configuration
-  const { open: openMethod, ready: methodReady } = useMethodConnect(
-    methodToken ? {
-      token: methodToken,
-      onSuccess: (publicToken, metadata) => {
-        console.log('Method Connect success:', { publicToken, metadata });
-        exchangeMethodTokenMutation.mutate(publicToken);
-      },
-      onError: (error) => {
-        console.error('Method Connect error:', error);
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect with Method. Please try again.",
-          variant: "destructive",
-        });
-        setMethodToken(null);
-        setMethodEntityId(null);
-        setConnectionType(null);
-      },
-      onExit: () => {
-        console.log('Method Connect exited');
-        setMethodToken(null);
-        setMethodEntityId(null);
-        setConnectionType(null);
-      },
-      onEvent: (event, metadata) => {
-        console.log('Method Connect event:', { event, metadata });
-      },
-    } : null
-  );
-
-  const handleMethodLink = () => {
-    setConnectionType('method');
-    if (methodToken && methodReady) {
-      openMethod();
-    } else {
-      methodTokenMutation.mutate();
-    }
-  };
-
-  // Auto-open Method Connect when token is ready
-  useEffect(() => {
-    if (methodToken && methodReady && connectionType === 'method') {
-      openMethod();
-    }
-  }, [methodToken, methodReady, openMethod, connectionType]);
+  // Method Connect configuration - Disabled until server-side flow is implemented
+  // TODO: Method doesn't have a client-side SDK like Plaid. 
+  // Need to implement server-side connection flow or hosted redirect.
 
   // Auto-open Plaid Link when token is ready
   useEffect(() => {
@@ -396,25 +312,25 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                 </Button>
               </div>
 
-              {/* Method Link Integration */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              {/* Method Link Integration - TODO: Implement server-side flow */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center opacity-50">
                 <CreditCard className="h-10 w-10 text-secondary mx-auto mb-3" />
                 <h4 className="text-md font-medium text-primary mb-2">Liability Accounts</h4>
                 <p className="text-xs text-secondary mb-3">
                   Connect credit cards, loans & mortgages
                 </p>
                 <Button 
-                  onClick={handleMethodLink}
-                  disabled={methodTokenMutation.isPending || exchangeMethodTokenMutation.isPending || connectionType === 'plaid'}
+                  disabled={true}
                   className="w-full bg-primary text-white hover:bg-gray-800"
                   size="sm"
                   data-testid="button-method-connect"
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
-                  {methodTokenMutation.isPending && connectionType === 'method' ? "Initializing..." : 
-                   exchangeMethodTokenMutation.isPending ? "Connecting..." : 
-                   "Connect with Method"}
+                  Coming Soon
                 </Button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Method integration requires additional setup
+                </p>
               </div>
             </div>
             
