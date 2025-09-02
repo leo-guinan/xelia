@@ -46,6 +46,13 @@ export interface IStorage {
   getMethodConnectionByEntity(entityId: string): Promise<MethodConnection | undefined>;
   createMethodConnection(connection: InsertMethodConnection & { userId: string }): Promise<MethodConnection>;
   updateMethodConnection(id: string, userId: string, updates: Partial<MethodConnection>): Promise<MethodConnection | undefined>;
+  
+  // Additional helper methods
+  getPlaidConnection(id: string): Promise<PlaidConnection | undefined>;
+  getMethodConnection(id: string): Promise<MethodConnection | undefined>;
+  getMethodConnectionByAccountId(accountId: string): Promise<MethodConnection | undefined>;
+  getUserByMethodEntityId(entityId: string): Promise<User | undefined>;
+  saveMethodEntityId(userId: string, entityId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -204,6 +211,50 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(methodConnections.id, id), eq(methodConnections.userId, userId)))
       .returning();
     return connection;
+  }
+  
+  // Additional helper methods
+  async getPlaidConnection(id: string): Promise<PlaidConnection | undefined> {
+    const [connection] = await db
+      .select()
+      .from(plaidConnections)
+      .where(eq(plaidConnections.id, id));
+    return connection;
+  }
+  
+  async getMethodConnection(id: string): Promise<MethodConnection | undefined> {
+    const [connection] = await db
+      .select()
+      .from(methodConnections)
+      .where(eq(methodConnections.id, id));
+    return connection;
+  }
+  
+  async getMethodConnectionByAccountId(accountId: string): Promise<MethodConnection | undefined> {
+    const [connection] = await db
+      .select()
+      .from(methodConnections)
+      .where(eq(methodConnections.accountId, accountId));
+    return connection;
+  }
+  
+  async getUserByMethodEntityId(entityId: string): Promise<User | undefined> {
+    // First find the Method connection with this entity ID
+    const [connection] = await db
+      .select()
+      .from(methodConnections)
+      .where(eq(methodConnections.entityId, entityId));
+    
+    if (!connection) return undefined;
+    
+    // Then get the user
+    return this.getUser(connection.userId);
+  }
+  
+  async saveMethodEntityId(userId: string, entityId: string): Promise<void> {
+    // This is a helper that could store the entity ID in user metadata
+    // For now, we'll rely on the methodConnections table
+    // In a real implementation, you might want to add a methodEntityId field to the users table
   }
 }
 

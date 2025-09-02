@@ -22,10 +22,12 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import AccountCard from "./account-card";
 import AddAccountModal from "./add-account-modal";
+import ProviderConnectModal from "./provider-connect-modal";
 
 export default function AccountList() {
   const [sortBy, setSortBy] = useState("balance-desc");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showProviderModal, setShowProviderModal] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -207,14 +209,24 @@ export default function AccountList() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <h3 className="text-lg font-semibold text-primary">Your Accounts</h3>
-              <Button
-                onClick={() => setShowAddModal(true)}
-                size="sm"
-                className="bg-primary text-white hover:bg-gray-800"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Account
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowProviderModal(true)}
+                  size="sm"
+                  className="bg-primary text-white hover:bg-gray-800"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Connect Accounts
+                </Button>
+                <Button
+                  onClick={() => setShowAddModal(true)}
+                  size="sm"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Manual Entry
+                </Button>
+              </div>
             </div>
             <div className="flex items-center space-x-3">
               <label htmlFor="sort-select" className="text-sm font-medium text-secondary">
@@ -240,14 +252,22 @@ export default function AccountList() {
             <div className="text-center py-12">
               <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h4 className="text-lg font-semibold text-primary mb-2">No accounts found</h4>
-              <p className="text-secondary mb-4">Add your first debt account to get started</p>
-              <Button
-                onClick={() => setShowAddModal(true)}
-                className="bg-primary text-white hover:bg-gray-800"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Account
-              </Button>
+              <p className="text-secondary mb-4">Connect your accounts or try with demo data</p>
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={() => setShowProviderModal(true)}
+                  className="bg-primary text-white hover:bg-gray-800"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Get Started
+                </Button>
+                <Button
+                  onClick={() => setShowAddModal(true)}
+                  variant="outline"
+                >
+                  Manual Entry
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -331,6 +351,11 @@ export default function AccountList() {
       <AddAccountModal 
         isOpen={showAddModal} 
         onClose={() => setShowAddModal(false)} 
+      />
+      
+      <ProviderConnectModal
+        isOpen={showProviderModal}
+        onClose={() => setShowProviderModal(false)}
       />
     </>
   );

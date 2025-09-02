@@ -8,6 +8,7 @@ import { z } from "zod";
 import { apiRateLimiter, sanitizeMiddleware, Encryption, logSecurityEvent } from "./security";
 import { config } from "./config";
 import { isMethodConfigured, getMethodClient, MethodClient } from "./method";
+import { setupProviderRoutes } from "./routes/providers";
 
 // Helper function to sync Method accounts
 async function syncMethodAccounts(userId: string, entityId: string, accountId: string) {
@@ -102,6 +103,9 @@ async function syncPlaidAccounts(userId: string, accessToken: string, institutio
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   setupAuth(app);
+  
+  // Provider routes (new unified abstraction)
+  setupProviderRoutes(app);
 
   // Note: Auth routes are now handled in auth.ts
 
