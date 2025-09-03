@@ -79,19 +79,55 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Serve static files with proper MIME types
+  // Handle /assets/* requests explicitly to avoid auth middleware
+  app.get('/assets/*', (req, res) => {
+    const assetPath = path.join(distPath, req.path);
+    
+    // Check if file exists
+    if (!fs.existsSync(assetPath)) {
+      return res.status(404).send('Asset not found');
+    }
+    
+    // Set proper MIME type based on file extension
+    const ext = path.extname(assetPath).toLowerCase();
+    const mimeTypes: { [key: string]: string } = {
+      '.css': 'text/css',
+      '.js': 'application/javascript',
+      '.json': 'application/json',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.svg': 'image/svg+xml',
+      '.ico': 'image/x-icon',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+      '.ttf': 'font/ttf',
+      '.eot': 'application/vnd.ms-fontobject'
+    };
+    
+    const contentType = mimeTypes[ext] || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    
+    // Send the file
+    res.sendFile(assetPath);
+  });
+
+  // Serve other static files from root
   app.use(express.static(distPath, {
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('.css')) {
-        res.setHeader('Content-Type', 'text/css');
+        res.setHeader('Content-Type', 'text/css; charset=UTF-8');
       } else if (filePath.endsWith('.js')) {
-        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Content-Type', 'application/javascript; charset=UTF-8');
       }
-    }
+    },
+    index: false // Don't serve index.html automatically
   }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=UTF-8');
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

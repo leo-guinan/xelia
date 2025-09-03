@@ -67,21 +67,21 @@ export class MethodProvider extends LiabilityProvider {
       
       // Create element token for the Connect flow
       // The Connect element allows users to connect their liability accounts
+      // Don't specify products - let Method use the default allowed products for the team
       const elementResponse = await this.methodClient.elements.token.create({
         entity_id: entity.id,
         type: 'connect',
         connect: {
-          // Request products we want to fetch for the accounts
-          products: ['balance', 'payoff', 'update'],
+          // Don't specify products - use team defaults
           // Filter for liability accounts only
           account_filters: {
             liability_types: [
               'credit_card',
               'auto_loan',
-              'student_loans', // Note: 'student_loans' not 'student_loan'
+              'student_loans',
               'mortgage',
               'personal_loan',
-              'loan', // General loan type
+              'loan',
             ],
           },
         },
