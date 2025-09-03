@@ -121,9 +121,9 @@ export const securityConfig = {
   passwordMinLength: 8,
   passwordMaxLength: 128,
   
-  // Password complexity regex
-  passwordComplexityRegex: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-  passwordComplexityMessage: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+  // Password complexity regex - simplified: at least 8 chars and one special character
+  passwordComplexityRegex: /^(?=.*[@$!%*?&#^()_+=\-{}\[\]|\\:";'<>,.?\/~`])/,
+  passwordComplexityMessage: 'Password must be at least 8 characters and contain at least one special character',
   
   // Rate limiting
   rateLimitWindow: parseInt(config.RATE_LIMIT_WINDOW_MS, 10),

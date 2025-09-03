@@ -171,27 +171,37 @@ export function logSecurityEvent(event: string, details: any = {}) {
 }
 
 // Password complexity validator
-export function validatePasswordComplexity(password: string): { valid: boolean; message?: string } {
+export function validatePasswordComplexity(password: string): { valid: boolean; message?: string; details?: string[] } {
+  const errors: string[] = [];
+  
   if (password.length < securityConfig.passwordMinLength) {
-    return { 
-      valid: false, 
-      message: `Password must be at least ${securityConfig.passwordMinLength} characters` 
-    };
+    errors.push(`At least ${securityConfig.passwordMinLength} characters`);
   }
   
   if (password.length > securityConfig.passwordMaxLength) {
-    return { 
-      valid: false, 
-      message: `Password must not exceed ${securityConfig.passwordMaxLength} characters` 
-    };
+    errors.push(`Maximum ${securityConfig.passwordMaxLength} characters`);
   }
   
   if (!securityConfig.passwordComplexityRegex.test(password)) {
+    errors.push('At least one special character (@$!%*?&#^()_+=-{}[]|\\:";\'<>,.?/~`)');
+  }
+  
+  if (errors.length > 0) {
     return { 
       valid: false, 
-      message: securityConfig.passwordComplexityMessage 
+      message: 'Password requirements not met',
+      details: errors
     };
   }
   
   return { valid: true };
 }
+
+// Export password requirements for frontend
+export const passwordRequirements = {
+  minLength: securityConfig.passwordMinLength,
+  maxLength: securityConfig.passwordMaxLength,
+  requireSpecialChar: true,
+  specialChars: '@$!%*?&#^()_+=-{}[]|\\:";\'<>,.?/~`',
+  message: securityConfig.passwordComplexityMessage
+};

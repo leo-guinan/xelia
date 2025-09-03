@@ -48,6 +48,10 @@ async function syncMethodAccounts(userId: string, entityId: string, accountId: s
 // Helper function to sync accounts from Plaid
 async function syncPlaidAccounts(userId: string, accessToken: string, institutionName: string) {
   try {
+    if (!plaidClient) {
+      throw new Error('Plaid is not configured');
+    }
+    
     // Get accounts
     const accountsResponse = await plaidClient.accountsGet({ access_token: accessToken });
     
@@ -246,6 +250,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      if (!plaidClient) {
+        return res.status(400).json({ message: 'Plaid is not configured' });
+      }
+      
       const linkTokenRequest = {
         user: {
           client_user_id: userId,
@@ -275,6 +283,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!public_token) {
         res.status(400).json({ message: "Public token is required" });
         return;
+      }
+
+      if (!plaidClient) {
+        return res.status(400).json({ message: 'Plaid is not configured' });
       }
 
       // Exchange public token for access token

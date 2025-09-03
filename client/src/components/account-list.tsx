@@ -350,7 +350,11 @@ export default function AccountList() {
 
       <AddAccountModal 
         isOpen={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
+        onClose={() => setShowAddModal(false)}
+        onOpenProvider={() => {
+          setShowAddModal(false);
+          setShowProviderModal(true);
+        }}
       />
       
       <ProviderConnectModal

@@ -39,6 +39,7 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 interface AddAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenProvider?: () => void;
 }
 
 const manualAccountSchema = insertDebtAccountSchema.extend({
@@ -59,7 +60,7 @@ const accountTypes = [
   { value: "heloc", label: "HELOC" },
 ];
 
-export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProps) {
+export default function AddAccountModal({ isOpen, onClose, onOpenProvider }: AddAccountModalProps) {
   const [showManualForm, setShowManualForm] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -210,11 +211,11 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
   });
 
   const handlePlaidLink = () => {
-    setConnectionType('plaid');
-    if (linkToken && ready) {
-      open();
-    } else {
-      linkTokenMutation.mutate();
+    // Close this modal and open the provider modal instead
+    // This prevents modal overlay conflicts
+    onClose();
+    if (onOpenProvider) {
+      onOpenProvider();
     }
   };
 
@@ -300,15 +301,12 @@ export default function AddAccountModal({ isOpen, onClose }: AddAccountModalProp
                 </p>
                 <Button 
                   onClick={handlePlaidLink}
-                  disabled={linkTokenMutation.isPending || exchangeTokenMutation.isPending || connectionType === 'method'}
                   className="w-full bg-primary text-white hover:bg-gray-800"
                   size="sm"
                   data-testid="button-plaid-connect"
                 >
                   <Link className="h-4 w-4 mr-2" />
-                  {linkTokenMutation.isPending && connectionType === 'plaid' ? "Initializing..." : 
-                   exchangeTokenMutation.isPending ? "Connecting..." : 
-                   "Connect with Plaid"}
+                  Connect with Plaid
                 </Button>
               </div>
 

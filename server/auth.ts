@@ -5,7 +5,7 @@ import connectPgSimple from 'connect-pg-simple';
 import { storage } from './storage';
 import { z } from 'zod';
 import { config, securityConfig } from './config';
-import { authRateLimiter, sanitizeMiddleware, logSecurityEvent, validatePasswordComplexity } from './security';
+import { authRateLimiter, sanitizeMiddleware, logSecurityEvent, validatePasswordComplexity, passwordRequirements } from './security';
 
 // Session configuration
 export function setupSession() {
@@ -71,6 +71,17 @@ export function setupAuth(app: Express) {
   app.set('trust proxy', 1);
   app.use(setupSession());
 
+  // Password requirements endpoint (public)
+  app.get('/api/auth/password-requirements', (req: Request, res: Response) => {
+    res.json({
+      minLength: passwordRequirements.minLength,
+      maxLength: passwordRequirements.maxLength,
+      requireSpecialChar: passwordRequirements.requireSpecialChar,
+      specialChars: passwordRequirements.specialChars,
+      message: passwordRequirements.message
+    });
+  });
+
   // Register route with rate limiting and sanitization
   app.post('/api/auth/register', authRateLimiter, sanitizeMiddleware, async (req: Request, res: Response) => {
     try {
@@ -123,7 +134,18 @@ export function setupAuth(app: Express) {
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ message: 'Invalid input', errors: error.errors });
+        // Provide detailed password validation errors
+        const passwordError = error.errors.find(e => e.path.includes('password'));
+        if (passwordError) {
+          const validation = validatePasswordComplexity(req.body.password || '');
+          res.status(400).json({ 
+            message: 'Password requirements not met', 
+            errors: error.errors,
+            passwordRequirements: validation.details || []
+          });
+        } else {
+          res.status(400).json({ message: 'Invalid input', errors: error.errors });
+        }
       } else {
         console.error('Registration error:', error);
         res.status(500).json({ message: 'Failed to register user' });
