@@ -76,7 +76,40 @@ export const config = validateEnv();
 
 // Helper to get allowed origins as array
 export const getAllowedOrigins = () => {
-  return config.ALLOWED_ORIGINS.split(',').map(origin => origin.trim());
+  const origins = config.ALLOWED_ORIGINS.split(',').map(origin => origin.trim());
+  
+  // Always allow the production domain
+  const productionOrigins = [
+    'https://xelia.ideanexusventures.com',
+    'https://www.xelia.ideanexusventures.com'
+  ];
+  
+  // Add production origins if not already included
+  productionOrigins.forEach(origin => {
+    if (!origins.includes(origin)) {
+      origins.push(origin);
+    }
+  });
+  
+  // In development, also allow localhost variations
+  if (config.NODE_ENV === 'development') {
+    const devOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:5173'
+    ];
+    
+    devOrigins.forEach(origin => {
+      if (!origins.includes(origin)) {
+        origins.push(origin);
+      }
+    });
+  }
+  
+  return origins;
 };
 
 // Security configuration
