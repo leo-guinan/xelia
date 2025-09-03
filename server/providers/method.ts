@@ -11,6 +11,7 @@ export class MethodProvider extends LiabilityProvider {
     
     if (this.isConfigured()) {
       const env = this.getMethodEnvironment();
+      // Method client initialization - note Method is a function/constructor
       this.methodClient = new Method({
         apiKey: config.METHOD_API_KEY!,
         env,
@@ -41,27 +42,55 @@ export class MethodProvider extends LiabilityProvider {
       // Get or create entity for the user
       const entity = await this.getOrCreateEntity(options.userId);
       
-      // Method uses a different flow - we need to create a connect session
-      // and return a URL for the user to complete the connection
-      const connect = await this.methodClient
-        .entities(entity.id)
-        .connect
-        .create({
-          products: ['liabilities'],
-        });
+      // Method uses element tokens for the connect flow
+      // The frontend will need to separately request the element token
+      // and use it with the Opal SDK
       
-      // Method Connect returns a URL for hosted experience
       return {
         success: true,
-        connectionId: connect.id,
-        redirectUrl: connect.connect_url, // This is the URL user should be redirected to
+        connectionId: entity.id,
+        requiresElementToken: true, // Signal that frontend needs to request element token
       };
     } catch (error) {
       console.error('Method connect error:', error);
       return {
         success: false,
-        error: 'Failed to create Method connection',
+        error: 'Failed to create Method entity',
       };
+    }
+  }
+  
+  async createElementToken(userId: string): Promise<string> {
+    try {
+      // Get or create entity for the user
+      const entity = await this.getOrCreateEntity(userId);
+      
+      // Create element token for the Connect flow
+      // The Connect element allows users to connect their liability accounts
+      const elementResponse = await this.methodClient.elements.create({
+        entity_id: entity.id,
+        type: 'connect',
+        connect: {
+          products: ['liability'], // We only want liability accounts
+          liability: {
+            // Allow all liability types
+            account_types: [
+              'credit_card',
+              'auto_loan',
+              'student_loan',
+              'mortgage',
+              'personal_loan',
+              'business_loan',
+              'heloc',
+            ],
+          },
+        },
+      });
+      
+      return elementResponse.element_token;
+    } catch (error) {
+      console.error('Method createElementToken error:', error);
+      throw new Error('Failed to create element token');
     }
   }
   

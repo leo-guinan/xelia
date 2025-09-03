@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePlaidLink } from "react-plaid-link";
+import { OpalProvider } from "@methodfi/opal-react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,9 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 
+// Lazy load Method Connect component
+const MethodConnect = lazy(() => import("./method-connect"));
+
 interface ProviderConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,6 +54,7 @@ export default function ProviderConnectModal({ isOpen, onClose }: ProviderConnec
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [dataMode, setDataMode] = useState<'live' | 'demo'>('demo');
   const [plaidToken, setPlaidToken] = useState<string | null>(null);
+  const [showMethodConnect, setShowMethodConnect] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -76,8 +81,11 @@ export default function ProviderConnectModal({ isOpen, onClose }: ProviderConnec
     onSuccess: (data, variables) => {
       if (variables.source === 'plaid' && data.token) {
         setPlaidToken(data.token);
+      } else if (variables.source === 'method' && data.requiresElementToken) {
+        // Method needs to use the Opal SDK
+        setShowMethodConnect(true);
       } else if (data.redirectUrl) {
-        // For Method or other redirect-based flows
+        // For other redirect-based flows
         window.location.href = data.redirectUrl;
       } else if (variables.source === 'demo') {
         // Demo doesn't need additional steps
@@ -186,7 +194,8 @@ export default function ProviderConnectModal({ isOpen, onClose }: ProviderConnec
   const providers = providersData?.providers || [];
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Connect Your Accounts</DialogTitle>
@@ -323,5 +332,26 @@ export default function ProviderConnectModal({ isOpen, onClose }: ProviderConnec
         )}
       </DialogContent>
     </Dialog>
+    
+    {/* Method Connect Modal - wrapped in OpalProvider */}
+    {showMethodConnect && (
+      <OpalProvider>
+        <Suspense fallback={<div />}>
+          <MethodConnect
+            isOpen={showMethodConnect}
+            onClose={() => {
+              setShowMethodConnect(false);
+              setSelectedProvider(null);
+            }}
+            onSuccess={() => {
+              setShowMethodConnect(false);
+              onClose();
+            }}
+            dataMode={dataMode === 'demo' ? 'test' : dataMode}
+          />
+        </Suspense>
+      </OpalProvider>
+    )}
+    </>
   );
 }

@@ -74,11 +74,7 @@ app.use((req, res, next) => {
 
   // Server configuration
   const port = parseInt(config.PORT, 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, "0.0.0.0", () => {
     log(`🚀 Server running on port ${port} in ${config.NODE_ENV} mode`);
     
     if (config.NODE_ENV === 'development') {

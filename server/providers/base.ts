@@ -43,6 +43,7 @@ export interface ConnectResult {
   connectionId?: string;
   redirectUrl?: string; // For redirect-based flows
   token?: string; // For embedded flows
+  requiresElementToken?: boolean; // For Method Elements flow
   error?: string;
 }
 

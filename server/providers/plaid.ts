@@ -14,11 +14,18 @@ export class PlaidProvider extends LiabilityProvider {
   }
   
   isConfigured(): boolean {
-    return !!(config.PLAID_CLIENT_ID && config.PLAID_SECRET);
+    return !!(config.PLAID_CLIENT_ID && config.PLAID_SECRET && plaidClient);
   }
   
   async connect(options: ConnectOptions): Promise<ConnectResult> {
     try {
+      if (!plaidClient) {
+        return {
+          success: false,
+          error: 'Plaid is not configured',
+        };
+      }
+      
       // Create link token for Plaid Link
       const request = {
         client_name: 'Xelia Debt Tracker',
@@ -50,7 +57,7 @@ export class PlaidProvider extends LiabilityProvider {
   async disconnect(connectionId: string): Promise<boolean> {
     try {
       const connection = await storage.getPlaidConnection(connectionId);
-      if (!connection) return false;
+      if (!connection || !plaidClient) return false;
       
       // Remove the item from Plaid
       await plaidClient.itemRemove({
@@ -72,7 +79,7 @@ export class PlaidProvider extends LiabilityProvider {
   async getAccounts(connectionId: string): Promise<AccountData[]> {
     try {
       const connection = await storage.getPlaidConnection(connectionId);
-      if (!connection) return [];
+      if (!connection || !plaidClient) return [];
       
       // Get accounts
       const accountsResponse = await plaidClient.accountsGet({
@@ -117,6 +124,10 @@ export class PlaidProvider extends LiabilityProvider {
   
   async exchangePublicToken(publicToken: string, userId: string): Promise<string> {
     try {
+      if (!plaidClient) {
+        throw new Error('Plaid is not configured');
+      }
+      
       // Exchange public token for access token
       const exchangeResponse = await plaidClient.itemPublicTokenExchange({
         public_token: publicToken,

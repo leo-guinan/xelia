@@ -80,6 +80,26 @@ export function setupProviderRoutes(app: Express) {
     }
   });
   
+  // Create Method element token (for Opal/Connect)
+  app.post('/api/providers/method/element-token', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId!;
+      const methodProvider = providerManager.getProvider('method');
+      
+      if (!methodProvider) {
+        return res.status(400).json({ message: 'Method provider not available' });
+      }
+      
+      // Create element token for the user
+      const token = await (methodProvider as any).createElementToken(userId);
+      
+      res.json({ token });
+    } catch (error) {
+      console.error('Error creating Method element token:', error);
+      res.status(500).json({ message: 'Failed to create element token' });
+    }
+  });
+  
   // Handle Method webhook
   app.post('/api/providers/method/webhook', async (req, res) => {
     try {
