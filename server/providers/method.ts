@@ -67,27 +67,27 @@ export class MethodProvider extends LiabilityProvider {
       
       // Create element token for the Connect flow
       // The Connect element allows users to connect their liability accounts
-      const elementResponse = await this.methodClient.elements.create({
+      const elementResponse = await this.methodClient.elements.token.create({
         entity_id: entity.id,
         type: 'connect',
         connect: {
-          products: ['liability'], // We only want liability accounts
-          liability: {
-            // Allow all liability types
-            account_types: [
+          // Request products we want to fetch for the accounts
+          products: ['balance', 'payoff', 'update'],
+          // Filter for liability accounts only
+          account_filters: {
+            liability_types: [
               'credit_card',
               'auto_loan',
-              'student_loan',
+              'student_loans', // Note: 'student_loans' not 'student_loan'
               'mortgage',
               'personal_loan',
-              'business_loan',
-              'heloc',
+              'loan', // General loan type
             ],
           },
         },
       });
       
-      return elementResponse.element_token;
+      return elementResponse.data.element_token;
     } catch (error) {
       console.error('Method createElementToken error:', error);
       throw new Error('Failed to create element token');
